@@ -52,7 +52,7 @@ def formatFile():
             filterList[5] = cell.column
         if cell.value.lower() == "Model".lower():
             filterList[6] = cell.column
-    print(filterList)
+    
 
     #Check for missing columns
     try:
@@ -75,7 +75,7 @@ def formatFile():
             except Exception:
                 rowData.append("Column Missing")
         data.append(rowData)
-        print(rowData)
+        
 
 
 
@@ -116,11 +116,13 @@ def formatFile():
 
     headerBorder = opx.styles.borders.Border(top=opx.styles.borders.Side(style='thick', color='80002060'), bottom=opx.styles.borders.Side(style='thick'))
     
-    img = opx.drawing.image.Image("./data/SDI_Logo.PNG")
+    img = opx.drawing.image.Image("V:\\Proposals\\Reference\\RJA\\0121\\HOK\\SDI_Pueblo County Jail Qualifications Folder\\SDI Logo.jpg")
+    img.height = 40
+    img.width = 65
     sheetNew.add_image(img, 'A1')
     
 
-    sheetNew['A2'] = "Title"
+    sheetNew['A2'] = ""
     sheetNew['A2'].font = opx.styles.Font(size=24, bold=True)
 
     sheetNew['A3'] = str(date.today().strftime("%B %d, %Y"))
@@ -158,6 +160,9 @@ def formatFile():
 
     for i in range(len(data)):
         if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
+            if sheetNew['A2'].value == "":
+                sheetNew['A2'] = data[i][5]
+                continue
             rowNum = rowNum+1
             c = "A"+str(rowNum)
             sheetNew[c] = data[i][5]
