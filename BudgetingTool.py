@@ -1,24 +1,32 @@
 import openpyxl as opx
 import tkinter as tk
+from datetime import date
 from tkinter import filedialog
 
 inputFilepath = ""
 outputFilepath = ""
 
-def getFilepath():
-    global inputFilepath
-    inputFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
+root = tk.Tk()
 
-def getOutputFolder():
-    global outputFilepath 
-    inputFilepath = filedialog.askdirectory()
+root.title("SDI Budget Formatting Tool")
+root.geometry("800x400")
+
+errorFrame = tk.Frame(root)
+errorFrame.pack(side=tk.BOTTOM)
+errorMsg = tk.Label(errorFrame, text="")
+errorMsg.pack(pady = 50)
     
 def formatFile():
     
     if inputFilepath == "":
-        print("No input file selected")
+        errorMsg.config(text="Error: No input file selected")
+        return
+    
     if outputFilepath == "":
-        print("No output folder selected")
+        errorMsg.config(text="Error: No output folder selected")
+        return
+
+    errorMsg.config(text="This could take a couple minutes...")
 
     #Open Excel File TODO:Generalize for multiple budgets from folder, or create a GUI with file selection
     wb = opx.load_workbook(inputFilepath)
@@ -50,7 +58,7 @@ def formatFile():
     try:
         assert (0 not in filterList), "Column may be missing"
     except Exception as e:
-        print(e)
+        errorMsg.config(text="Warning: One or more columns may be missing")
 
     #Fill 2D Array (Maybe linkedlist/Hash) with information
 
@@ -72,8 +80,12 @@ def formatFile():
 
 
     #Create new Excel File
+    
+    temp = inputFilepath.split('/')
 
-    newFile = "./AQ_Budgets/FormattedBudget.xlsx"
+    filename = temp[(len(temp)-1)].split('.')[0] + "_formatted.xlsx"
+
+    newFile = outputFilepath + "/" + filename
 
     wbNew = opx.Workbook()
 
@@ -103,11 +115,15 @@ def formatFile():
 
 
     headerBorder = opx.styles.borders.Border(top=opx.styles.borders.Side(style='thick', color='80002060'), bottom=opx.styles.borders.Side(style='thick'))
+    
+    img = opx.drawing.image.Image("./data/SDI_Logo.PNG")
+    sheetNew.add_image(img, 'A1')
+    
 
     sheetNew['A2'] = "Title"
     sheetNew['A2'].font = opx.styles.Font(size=24, bold=True)
 
-    sheetNew['A3'] = "Date"
+    sheetNew['A3'] = str(date.today().strftime("%B %d, %Y"))
     sheetNew['A3'].font = opx.styles.Font(size=18, bold=True) 
 
     sheetNew['A5'] = "Item"
@@ -141,7 +157,7 @@ def formatFile():
     rowNum = 6
 
     for i in range(len(data)):
-        if data[i][0] == None:
+        if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
             rowNum = rowNum+1
             c = "A"+str(rowNum)
             sheetNew[c] = data[i][5]
@@ -213,35 +229,43 @@ def formatFile():
 
 
 
-root = tk.Tk()
 
-root.geometry("400x400")
 
 frame = tk.Frame(root)
-frame.pack()
+frame.pack(padx=40, pady=40)
+
 
 fileFrame = tk.Frame(root)
 fileFrame.pack()
 
 bottomFrame = tk.Frame(root)
-bottomFrame.pack(side=tk.BOTTOM)
+bottomFrame.pack()
 
-errorFrame = tk.Frame(root)
-errorFrame.pack(side=tk.BOTTOM)
+in_text = tk.Label(fileFrame, text="The input file is: " + inputFilepath)
+in_text.pack(side=tk.TOP)
 
-in_file = tk.Button(frame, text="input file", command=getFilepath)
-in_file.pack(padx=10, pady=15, side=tk.LEFT)
-
-out_folder = tk.Button(frame, text="output file", command=getOutputFolder)
-out_folder.pack(padx=10, pady=15, side=tk.LEFT)
+out_text = tk.Label(fileFrame, text="The output folder is: " + outputFilepath)
+out_text.pack(side=tk.TOP)
 
 format_button = tk.Button(bottomFrame, text="format file", command=formatFile)
-format_button.pack(padx=10, pady=15, side=tk.BOTTOM)
+format_button.pack(padx=10, pady=30, side=tk.BOTTOM)
 
-in_text = tk.Label(root, text="The input file is: " + inputFilepath)
-in_text.pack(side=tk.LEFT)
 
-out_text = tk.Label(root, text="The output folder is: " + outputFilepath)
-out_text.pack(side=tk.RIGHT)
+def getFilepath():
+    global inputFilepath
+    inputFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
+    in_text.config(text= "The input file is: " + inputFilepath)
+
+def getOutputFolder():
+    global outputFilepath 
+    outputFilepath = filedialog.askdirectory()
+    out_text.config(text= "The output folder is: " + outputFilepath)
+
+in_file = tk.Button(frame, text="select input file", command=getFilepath)
+in_file.pack(padx=10, pady=15, side=tk.LEFT)
+
+out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
+out_folder.pack(padx=10, pady=15, side=tk.LEFT)
+
 
 root.mainloop()
