@@ -2,6 +2,7 @@ import openpyxl as opx
 import tkinter as tk
 from datetime import date
 from tkinter import filedialog
+from PIL import Image, ImageTk
 
 inputFilepath = ""
 outputFilepath = ""
@@ -10,6 +11,10 @@ root = tk.Tk()
 
 root.title("SDI Budget Formatting Tool")
 root.geometry("800x400")
+
+ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 
 errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
@@ -26,7 +31,7 @@ def formatFile():
         errorMsg.config(text="Error: No output folder selected")
         return
 
-    errorMsg.config(text="This could take a couple minutes...")
+    errorMsg.config(text="Spreadsheet Successfully Formatted")
 
     #Open Excel File TODO:Generalize for multiple budgets from folder, or create a GUI with file selection
     wb = opx.load_workbook(inputFilepath)
@@ -65,15 +70,16 @@ def formatFile():
     data = []
     #data = [["Item", "Qty", "Description", "Model", "Unit Cost", "Total", "Remarks"]]
 
-    for i in range(2, len(sheet["A"])+1):
+    for row in sheet.rows:
         rowData = []
-    
+        if row[0].value == "ItemNo":
+            continue
         for item in filterList:
             try:
                 assert (item != 0)
-                rowData.append(sheet[i][item-1].value)
+                rowData.append(row[item-1].value)
             except Exception:
-                rowData.append("Column Missing")
+                rowData.append("")
         data.append(rowData)
         
 
@@ -90,7 +96,7 @@ def formatFile():
     wbNew = opx.Workbook()
 
 
-    #TODO:Fill information
+    #Fill information
     
     sheetNew = wbNew.active
 
@@ -116,7 +122,7 @@ def formatFile():
 
     headerBorder = opx.styles.borders.Border(top=opx.styles.borders.Side(style='thick', color='80002060'), bottom=opx.styles.borders.Side(style='thick'))
     
-    img = opx.drawing.image.Image("V:\\Proposals\\Reference\\RJA\\0121\\HOK\\SDI_Pueblo County Jail Qualifications Folder\\SDI Logo.jpg")
+    img = opx.drawing.image.Image("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
     img.height = 40
     img.width = 65
     sheetNew.add_image(img, 'A1')
@@ -179,7 +185,7 @@ def formatFile():
             sheetNew[("A"+str(rowNum))] = data[i][0]
             sheetNew[("B"+str(rowNum))] = data[i][1]
             sheetNew[("C"+str(rowNum))] = data[i][2]
-            sheetNew[("D"+str(rowNum))] = data[i][5]
+            sheetNew[("D"+str(rowNum))] = data[i][6]
             sheetNew[("E"+str(rowNum))] = data[i][3]
             sheetNew[("E"+str(rowNum))].number_format = "$#,##0.00"
             try:
