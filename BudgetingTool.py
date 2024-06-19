@@ -165,6 +165,7 @@ def formatFile():
     rowNum = 6
 
     for i in range(len(data)):
+        
         if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
             if sheetNew['A2'].value == "":
                 sheetNew['A2'] = data[i][5]
@@ -175,16 +176,24 @@ def formatFile():
             sheetNew[c].font = opx.styles.Font(size = 14, color = 'FFFFFF', bold = True)
             sheetNew[c].fill = opx.styles.PatternFill(fgColor="002060", fill_type="solid")
             sheetNew["B"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
+           
             sheetNew["C"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
+            
             sheetNew["D"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
             sheetNew["E"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
             sheetNew["F"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
+            
             sheetNew["H"+str(rowNum)].fill = opx.styles.PatternFill(fgColor = "002060", fill_type="solid")
+
+            
             rowNum = rowNum+1
         else:
+            if data[i][0] == None:
+
             sheetNew[("A"+str(rowNum))] = data[i][0]
             sheetNew[("B"+str(rowNum))] = data[i][1]
             sheetNew[("C"+str(rowNum))] = data[i][2]
+            sheetNew['C'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text = True)
             sheetNew[("D"+str(rowNum))] = data[i][6]
             sheetNew[("E"+str(rowNum))] = data[i][3]
             sheetNew[("E"+str(rowNum))].number_format = "$#,##0.00"
@@ -194,6 +203,7 @@ def formatFile():
                 sheetNew[("F"+str(rowNum))] = data[i][3]
             sheetNew["F"+str(rowNum)].number_format = "$#,##0.00"
             sheetNew[("H"+str(rowNum))] = data[i][4]
+            sheetNew['H'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text=True)
             sheetNew[("H"+str(rowNum))].font = opx.styles.Font(color = '595959')
         rowNum = rowNum+1
 
