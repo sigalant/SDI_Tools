@@ -33,7 +33,7 @@ def formatFile():
 
     errorMsg.config(text="Spreadsheet Successfully Formatted")
 
-    #Open Excel File TODO:Generalize for multiple budgets from folder, or create a GUI with file selection
+    #Open Excel File
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
 
@@ -65,7 +65,7 @@ def formatFile():
     except Exception as e:
         errorMsg.config(text="Warning: One or more columns may be missing")
 
-    #Fill 2D Array (Maybe linkedlist/Hash) with information
+    #Fill 2D Array with information
 
     data = []
     #data = [["Item", "Qty", "Description", "Model", "Unit Cost", "Total", "Remarks"]]
