@@ -3,8 +3,9 @@
 ## Budget Formatting Tool
 
 Build from terminal with: 
+```
 python -m PyInstaller --onefile -i ./data/SDI_Logo.PNG --hide-console hide-early BudgetingTool.py
-
+```
 ### How to Use
 
 To use the Budget formatting tool, first launch the application by double clicking the icon.
