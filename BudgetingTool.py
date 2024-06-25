@@ -1,5 +1,6 @@
 import openpyxl as opx
 import tkinter as tk
+import tkinter.ttk as ttk
 from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
@@ -7,14 +8,40 @@ from PIL import Image, ImageTk
 inputFilepath = ""
 outputFilepath = ""
 
+markup = 18
+
+
 root = tk.Tk()
 
 root.title("SDI Budget Formatting Tool")
-root.geometry("800x400")
+root.geometry("800x500")
 
 ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
+
+inputFrame = tk.Frame(root)
+inputFrame.pack()
+
+markupFrame = tk.Frame(inputFrame)
+markupFrame.pack(side=tk.LEFT)
+
+
+markupLabel = tk.Label(markupFrame, text= "Markup Percent")
+markupLabel.pack()
+
+spinbox = ttk.Spinbox(markupFrame, from_=0, to=100, format='%10.2f %%')
+spinbox.set('{:10.2f} %'.format(18))
+spinbox.pack()
+
+goodThroughFrame = tk.Frame(inputFrame)
+goodThroughFrame.pack(side = tk.LEFT, padx=20,pady=40)
+
+gtLabel = tk.Label(goodThroughFrame, text="Enter Good Through Date: ")
+gtLabel.pack()
+
+gtTextBox = tk.Entry(goodThroughFrame)
+gtTextBox.pack()
 
 errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
@@ -163,6 +190,8 @@ def formatFile():
     sheetNew['H5'].alignment = opx.styles.Alignment(horizontal = 'left', vertical = 'center')
 
     rowNum = 6
+    
+    errorShown = False
 
     for i in range(len(data)):
         
@@ -188,7 +217,9 @@ def formatFile():
             
             rowNum = rowNum+1
         else:
-            if data[i][0] == None:
+            if data[i][0] == None and not errorShown:
+                tk.messagebox.showerror('Formatting Error', "Error: Please collapse all items in autocad before export")
+                errorShown = True
 
             sheetNew[("A"+str(rowNum))] = data[i][0]
             sheetNew[("B"+str(rowNum))] = data[i][1]
@@ -220,9 +251,9 @@ def formatFile():
     sheetNew['E'+str(rowNum+3)].alignment = opx.styles.Alignment(horizontal = 'right', vertical = 'center')
     sheetNew['E'+str(rowNum+3)].font = opx.styles.Font(bold=True)
 
-    sheetNew[("F" + str(rowNum+1))] = "=SUM(F7:F" + str(rowNum) + ")"
+    sheetNew[("F" + str(rowNum+1))] = "=SUM(F6:F" + str(rowNum) + ")"
     sheetNew['F'+str(rowNum+1)].number_format = '$#,##0.00'
-    sheetNew[("F" + str(rowNum+2))] = "=F" + str(rowNum+1) + "*.18"
+    sheetNew[("F" + str(rowNum+2))] = "=F" + str(rowNum+1) +"*"+ str(float(spinbox.get().split()[0])/100.0)
     sheetNew['F'+str(rowNum+2)].number_format = '$#,##0.00'
     sheetNew[("F" + str(rowNum+3))] = "=SUM(F" + str(rowNum+1) + ":F" + str(rowNum+2) + ")"
     sheetNew['F'+str(rowNum+3)].number_format = '$#,##0.00'
@@ -242,7 +273,10 @@ def formatFile():
     sheetNew['A'+str(rowNum+8)] = "2. Price does not include sales tax or use taxes."
     sheetNew['A'+str(rowNum+8)].font = opx.styles.Font(color ='595959')
 
-    sheetNew['A'+str(rowNum+9)] = "3. Price is good through _____________"
+    if gtTextBox.get() != "":
+        sheetNew['A'+str(rowNum+9)] = ("3. Price is good through " + gtTextBox.get())
+    else:
+        sheetNew['A'+str(rowNum+9)] = "3. Price is good through _____________"
     sheetNew['A'+str(rowNum+9)].font = opx.styles.Font(color ='595959')
 
     wbNew.save(newFile)
@@ -269,7 +303,7 @@ out_text = tk.Label(fileFrame, text="The output folder is: " + outputFilepath)
 out_text.pack(side=tk.TOP)
 
 format_button = tk.Button(bottomFrame, text="format file", command=formatFile)
-format_button.pack(padx=10, pady=30, side=tk.BOTTOM)
+format_button.pack(padx=10, pady=20, side=tk.BOTTOM)
 
 
 def getFilepath():
@@ -287,6 +321,7 @@ in_file.pack(padx=10, pady=15, side=tk.LEFT)
 
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
 out_folder.pack(padx=10, pady=15, side=tk.LEFT)
+
 
 
 root.mainloop()
