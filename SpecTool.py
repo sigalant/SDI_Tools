@@ -8,6 +8,7 @@ import openpyxl as opx
 import num2words as n2m
 import re
 
+
 #Create doc and style
 doc = d.Document()
 
@@ -32,9 +33,9 @@ headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, P
 #TODO: Include other sheet(s) in workbook
 specRefs = [[],[],[],[]]  #Holds [Desc., Manufacturer, Model#, refFile] from xl spec ref file
 for row in refSheet.rows:
-    specRefs[0].append(row[1].value)
-    specRefs[1].append(row[3].value)
-    specRefs[2].append(row[4].value)
+    specRefs[0].append(str(row[1].value).lower())
+    specRefs[1].append(str(row[3].value).lower())
+    specRefs[2].append(str(row[4].value).lower())
     specRefs[3].append(row[10].value)
 
 #Iterate every row in Revit output sheet
@@ -56,7 +57,7 @@ for row in sheet.rows:
                     case _:
                         pass
             if -1 in headerIndexes:
-                print("Header missing?!??!?!")        
+                pass #print("Header missing?!??!?!")        
         continue
 
     #Add section header (location/area)
@@ -64,16 +65,9 @@ for row in sheet.rows:
         p = doc.add_paragraph('', style = 'Spec_Header')
         p.alignment = 1
         p.add_run(row[0].value + "\n").bold = True
-
-    #If similar thing exists, copy, paste, and highlight
-    #TODO:    vvv---Make this work---vvvv
-    elif ((row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+5].value != None) and
-          (row[headerIndexes[0]+4].value in specRefs[0] and row[headerIndexes[0]+5].value in specRefs[1])):
-        print("Maybe found something")
     
     #Create header with info from Revit output
     else:
-
         p = doc.add_paragraph('', style = 'Spec_Header')
         p.alignment = 0
 
@@ -261,37 +255,117 @@ for row in sheet.rows:
         
         #Add Header to doc
         p.add_run(run)
-        
-        #if specs exist, copy and paste
-        if row[headerIndexes[0]+3].value != None and row[headerIndexes[0]+3].value in specRefs[2]:
+
+        if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
+            #print(str(row[0].value) + " is existing")
+            continue
+
+        ambiguousModels = ["custom", "custom design"]
+	
+
+
+        #if specs exist, copy and paste (Unless existing)
+        if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] 
+            and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels):
             #COPY AND PASTE FROM ASSOCIATED DOC
-            temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" + specRefs[3][specRefs[2].index(row[headerIndexes[0]+3].value)] + ".docx")
+            temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
+                              + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx")
             fullText = []
+            
+            #====Item# with specs====#
+            #print("Specs found for item# " + str(row[0].value))
+            
+
             p = doc.add_paragraph('', style = 'Spec_Header')
             for para in temp.paragraphs[7:]:
                 p_runs = []
                 addRuns = False
-                for run in para.runs:
-                    if run.font.color.rgb == d.shared.RGBColor(0xFF, 0x00, 0x00):
-                        print(row[0].value)
-                        p.add_run('\n'.join(fullText))
-                        fullText = []
-                    
+                beginning = True
+                for runS in para.runs:
+                    if runS.font.color.rgb == d.shared.RGBColor(0xFF, 0x00, 0x00):
+                        if fullText:
+                            p.add_run('\n'.join(fullText) + '\n')
+                            fullText = []
+                        if beginning:
+                            beginning = False
+                            #p.add_run('\n')
                         if p_runs:
-                            p.add_run('\n' + ''.join(p_runs))
+                            p.add_run(''.join(p_runs))
+
                         p_runs = []
                         addRuns = True
-                        redRun = p.add_run(run.text)
+                        redRun = p.add_run(runS.text)
                         redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
                     else:
-                        p_runs.append(run.text)
+                        p_runs.append(runS.text)
                 if addRuns:
                     p.add_run(''.join(p_runs))
-                    p.add_run('\n')
+                    #p.add_run('\n')
                     addRuns = False
                 else:
                     fullText.append(para.text)
+                if not fullText:
+                    p.add_run('\n')
                 p_runs = []
             p.add_run('\n'.join(fullText))
 
+
+        # If Manufacturer and Desc. match, copy and highlight specs
+        elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
+            manuf = ""
+            if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
+                #print("Manufac")
+                manuf = str(row[headerIndexes[0]+2].value).lower()
+            elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
+                #print("Custom Fab")
+                manuf = "custom fabrication"
+            else:
+                continue
+            for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
+                if index == specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
+            
+                    #COPY AND PASTE FROM ASSOCIATED DOC
+                    
+                    temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
+                              + specRefs[3][index] + ".docx")
+                    fullText = []
+            
+
+                    p = doc.add_paragraph('', style = 'Spec_Header')
+                    for para in temp.paragraphs[7:]:
+                        p_runs = []
+                        addRuns = False
+                        beginning = True
+                        for runS in para.runs:
+                            if runS.font.color.rgb == d.shared.RGBColor(0xFF, 0x00, 0x00):
+                                if fullText:
+                                    p.add_run('\n'.join(fullText) + '\n').font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                                    fullText = []
+                                if beginning:
+                                    beginning = False
+                                    #p.add_run('\n')
+                                if p_runs:
+                                    p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+
+                                p_runs = []
+                                addRuns = True
+                                redRun = p.add_run(runS.text)
+                                redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+                                redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                            else:
+                                p_runs.append(runS.text)
+                        if addRuns:
+                            p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                            #p.add_run('\n')
+                            addRuns = False
+                        else:
+                            fullText.append(para.text)
+                        if not fullText:
+                            p.add_run('\n')
+                        p_runs = []
+                    p.add_run('\n'.join(fullText)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                    break
+
+                                           
+            #print("Maybe Specs found for item# " + str(row[0].value))
 doc.save("temp.docx")
