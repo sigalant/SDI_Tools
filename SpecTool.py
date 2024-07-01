@@ -256,16 +256,29 @@ for row in sheet.rows:
         #Add Header to doc
         p.add_run(run)
 
-        if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
-            #print(str(row[0].value) + " is existing")
-            continue
-
         ambiguousModels = ["custom", "custom design"]
+        if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
+                        #redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+            p = doc.add_paragraph('', style = 'Spec_Header')
+            p.add_run("1.\tExisting unit is located in ")
+            temp = p.add_run("existing kitchen; ")
+            temp.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+            p.add_run("unit should be thoroughly cleaned and ")
+            if row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value):           
+                p.add_run("remain where shown on plan\n")
+            else:
+                p.add_run("relocated where shown on plan\n2.\tSchedule time with Owner for relocating unit\n")
+            temp.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+            temp = p.add_run("3.\tRepair where corrosion spots appear; clean, sand, polish and repaint if necessary\n4.\tVerify all existing utility requirements and conditions.\n5.\tThoroughly clean and sanitize the unit\n")
+            temp.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+            p.add_run("6.\t Must meet all applicable federal, state, and local laws, rules, regulations, and codes")
+
+            #print(str(row[0].value) + " is existing")
 	
 
 
         #if specs exist, copy and paste (Unless existing)
-        if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] 
+        elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] 
             and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels):
             #COPY AND PASTE FROM ASSOCIATED DOC
             temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
@@ -277,7 +290,12 @@ for row in sheet.rows:
             
 
             p = doc.add_paragraph('', style = 'Spec_Header')
-            for para in temp.paragraphs[7:]:
+            i = 0
+            while "Utilities" not in temp.paragraphs[i].text:
+                i = i + 1
+
+            for para in temp.paragraphs[i:]:
+               
                 p_runs = []
                 addRuns = False
                 beginning = True
@@ -322,7 +340,7 @@ for row in sheet.rows:
             else:
                 continue
             for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
-                if index == specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
+                if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: #== specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
             
                     #COPY AND PASTE FROM ASSOCIATED DOC
                     
@@ -332,7 +350,10 @@ for row in sheet.rows:
             
 
                     p = doc.add_paragraph('', style = 'Spec_Header')
-                    for para in temp.paragraphs[7:]:
+                    i = 0
+                    while "Utilities" not in temp.paragraphs[i].text:
+                        i = i + 1
+                    for para in temp.paragraphs[i+1:]:
                         p_runs = []
                         addRuns = False
                         beginning = True
