@@ -7,6 +7,12 @@ import docx as d
 import openpyxl as opx
 import num2words as n2m
 import re
+import tkinter as tk
+
+inputFilepath = ""
+outputFilepath = ""
+
+root.tk.Tk()
 
 
 #Create doc and style
@@ -24,7 +30,7 @@ wb = opx.load_workbook("./_ALL INCLUSIVE.xlsx", read_only=True)
 sheet = wb.active
 
 #Open Specs reference file 
-wbr = opx.load_workbook("./All AutoText Index.xlsx", read_only=True)
+wbr = opx.load_workbook("./All AutoText Index2.xlsx", read_only=True)
 refSheet = wbr.active
 
 headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
@@ -258,8 +264,44 @@ for row in sheet.rows:
 
         ambiguousModels = ["custom", "custom design"]
         if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
-                        #redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+                        
+
+
+
             p = doc.add_paragraph('', style = 'Spec_Header')
+            remaining = (row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value))           
+            name = ""
+            if row[headerIndexes[0]+4].value.lower() != None:
+                name = row[headerIndexes[0]+4].value.lower()
+            specText = ""
+            if(remaining):
+                specText = specText + "Remain in place existing unit as follows:\n"
+            else:
+                specText = specText + "Relocate existing unit as follows:\n"
+            specList = []
+            if remaining:
+                specList.append("Existing unit is located in existing kitchen; unit should be thoroughly cleaned and remaing where shown on plan")
+            else:
+                specList.append("Existing unit is located in existing kitchen; unit should be thoroughly cleaned and relocated where shown on plan")
+                specList.append("Schedule time with Owner for relocating unit")
+            if "shelv" in name.lower():
+                specList.append("Replace shelves where corrosion spots appear; clean, sand, polish and repaint if necessary")
+            elif "trash" not in name.lower() and "bin" not in name.lower():
+                specList.append("Repair where corrosion spots appear; clean, sand, polish and repain if necessary")
+            i = 1
+            for spec in specList:
+                specText = specText + str(i) + ".\t" + spec + "\n"
+                i = i+1
+            p.add_run(specText)
+            rr = p.add_run(str(i) + ".\tVerify all existing utility requirements and conditions\n"+ str(i+1) + ".\tThoroughly clean and sanitize unit\n")
+            rr.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+            p.add_run(str(i+2) + ".\tMust meet all applicable federal, state, and local laws, rules, regulations and codes")
+
+            '''
+            if row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value):           
+                p.add_run("Remain in place existing unit as follows:\n")
+            else:
+                p.add_run("Relocate existing units as follows:\n")
             p.add_run("1.\tExisting unit is located in ")
             temp = p.add_run("existing kitchen; ")
             temp.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
@@ -274,7 +316,7 @@ for row in sheet.rows:
             p.add_run("6.\t Must meet all applicable federal, state, and local laws, rules, regulations, and codes")
 
             #print(str(row[0].value) + " is existing")
-	
+	        '''
 
 
         #if specs exist, copy and paste (Unless existing)
@@ -294,13 +336,12 @@ for row in sheet.rows:
             while "Utilities" not in temp.paragraphs[i].text:
                 i = i + 1
 
-            for para in temp.paragraphs[i:]:
-               
+            for para in temp.paragraphs[i+1:]:
                 p_runs = []
                 addRuns = False
                 beginning = True
                 for runS in para.runs:
-                    if runS.font.color.rgb == d.shared.RGBColor(0xFF, 0x00, 0x00):
+                    if runS.font.color.rgb != d.shared.RGBColor(0x00, 0x00, 0x00):
                         if fullText:
                             p.add_run('\n'.join(fullText) + '\n')
                             fullText = []
@@ -313,7 +354,7 @@ for row in sheet.rows:
                         p_runs = []
                         addRuns = True
                         redRun = p.add_run(runS.text)
-                        redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
+                        redRun.font.color.rgb = runS.font.color.rgb
                     else:
                         p_runs.append(runS.text)
                 if addRuns:
@@ -325,15 +366,18 @@ for row in sheet.rows:
                 if not fullText:
                     p.add_run('\n')
                 p_runs = []
-            p.add_run('\n'.join(fullText))
 
+            p.add_run('\n'.join(fullText))
+                
 
         # If Manufacturer and Desc. match, copy and highlight specs
         elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
             manuf = ""
+            highlight =False
             if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
                 #print("Manufac")
                 manuf = str(row[headerIndexes[0]+2].value).lower()
+                highlight = True
             elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
                 #print("Custom Fab")
                 manuf = "custom fabrication"
@@ -358,25 +402,34 @@ for row in sheet.rows:
                         addRuns = False
                         beginning = True
                         for runS in para.runs:
-                            if runS.font.color.rgb == d.shared.RGBColor(0xFF, 0x00, 0x00):
+                            if runS.font.color.rgb != d.shared.RGBColor(0x00, 0x00, 0x00):
                                 if fullText:
-                                    p.add_run('\n'.join(fullText) + '\n').font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                                    if highlight:
+                                        p.add_run('\n'.join(fullText) + '\n').font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                                    else:
+                                        p.add_run('\n'.join(fullText) + '\n')
                                     fullText = []
                                 if beginning:
                                     beginning = False
                                     #p.add_run('\n')
                                 if p_runs:
-                                    p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-
+                                    if highlight:
+                                        p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                                    else:
+                                        p.add_run(''.join(p_runs))
                                 p_runs = []
                                 addRuns = True
                                 redRun = p.add_run(runS.text)
-                                redRun.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
-                                redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                                redRun.font.color.rgb = runS.font.color.rgb
+                                if highlight:
+                                    redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
                             else:
                                 p_runs.append(runS.text)
                         if addRuns:
-                            p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                            if highlight:
+                                p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                            else:
+                                p.add_run(''.join(p_runs))
                             #p.add_run('\n')
                             addRuns = False
                         else:
@@ -384,7 +437,10 @@ for row in sheet.rows:
                         if not fullText:
                             p.add_run('\n')
                         p_runs = []
-                    p.add_run('\n'.join(fullText)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                    if highlight:
+                        p.add_run('\n'.join(fullText)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                    else:
+                        p.add_run('\n'.join(fullText))
                     break
 
                                            

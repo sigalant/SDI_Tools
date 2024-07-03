@@ -17,7 +17,7 @@ document.add_paragraph(
     'first item in unordered list', style='List Bullet'
 )
 document.add_paragraph(
-    'first item in ordered list', style='List Number'
+    'first item in \266 ordered list', style='List Number'
 )
 
 document.add_picture('./data/SDI_Logo.PNG', width=Inches(1.25))
