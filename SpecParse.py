@@ -1,6 +1,6 @@
 import docx
 
-masterDoc = docx.Document("AutoText Master.docx")
+masterDoc = docx.Document("AutoText Master June 2024.docx")
 newDoc = docx.Document()
 
 fullText = []
@@ -43,9 +43,14 @@ for p in masterDoc.paragraphs:
     else:
         fullText.append(p.text)
     if not fullText:
-        para.add_run('\n')
+        if "Utilities" in p.text:
+            para = newDoc.add_paragraph('')
+        else:
+            para.add_run('\n')
     p_runs = []
+    
     if finished:
+        print(fileName)
         try:
             newDoc.save("./Word Files/" + fileName + ".docx")
         except:
