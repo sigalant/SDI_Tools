@@ -8,6 +8,8 @@ import openpyxl as opx
 import num2words as n2m
 import re
 import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk
 
 from os import listdir
 from os.path import isfile, join
@@ -16,6 +18,7 @@ from os.path import isfile, join
 #input/output locations
 inputFilepath = ""
 outputFilepath = ""
+excelFilepath = ""
 
 #tkinter root window
 root = tk.Tk()
@@ -23,12 +26,20 @@ root = tk.Tk()
 root.title("SDI Specs Formatting Tool")
 root.geometry("800x400")
 
+
+
 def findSpecs():
-    wb = opx.load_workbook("./_ALL INCLUSIVE.xlsx", read_only=True)
+    try:
+        wb = opx.load_workbook(inputFilepath, read_only=True)
+    except:
+        print("Stinky Doo Doo input filepath")
+        return
     wbNew = opx.Workbook()
     newSheet = wbNew.active
     sheet = wb.active
     headerIndexes = [-1,-1,-1,-1]
+    
+    #TODO: Find more permanent place for these files
     onlyfiles = [f for f in listdir("V:\\Temp\\Antonio\\Template Specs_Word Files") if isfile(join("V:\\Temp\\Antonio\\Template Specs_Word Files", f))]        
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
@@ -53,39 +64,55 @@ def findSpecs():
                             pass
                 if -1 in headerIndexes:
                     print("Header missing?!??!?!")
+        #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
         elif row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
             continue
+        #Collect Name, Manufacturer, and Model No. for finding/matching a Spec ".docx" file
         else:
             
             specData = []
+            #Manually fill field for custom fab
             if row[headerIndexes[0]+5].value != None and "CUSTOM" in row[headerIndexes[0]+5].value:
                 specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
+            #Fill fields with Excel values
             else:
                 specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, row[headerIndexes[0]+3].value]
-            
+
+            #Add row to doc specific Excel file (Name, Manufacturer, Model No., Expected ".docx" filename)
             newSheet.append([specData[0], specData[1], specData[2], (str(specData[0])+"_"+ str(specData[1]) +"_"+ str(specData[2]))])
-            rowIndex = newSheet.max_row
-            filled = False
+            rowIndex = newSheet.max_row #current row
+            filled = False #To avoid highlighting same row multiple times
             for file in onlyfiles:
+                #If model number and manufacturer match or is custom fab and name matches, row background is white
                 if (specData[1] == "Custom Fabrication" and str(specData[0])+ "_Custom Fabrication" in file) or (str(specData[2]) in file and specData[2] != "" and str(specData[1]).lower() in file.lower() and specData[1] != ""):
                     newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Temp\\Antonio\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = noFill
                     print(file)
                     break
+                #Elif manufacturer and name match, row background is yellow, and doc link is changed to the first (or last?) possible match
                 elif str(specData[0]).lower() + "_" + str(specData[1]).lower() in file.lower():
                     newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Temp\\Antonio\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = yellowFill
+                    filled = True
+                #Fill with red and remove ".docx" link on first non-match (will be overwritten if a match is found after the first non-match)
                 elif not filled:
                     newSheet[rowIndex][3].value = ""
 
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = redFill
                     filled = True
-    
-    wbNew.save("TestSheet.xlsx")
 
+    #Save new Specs Worksheet
+    try:
+        wbNew.save(outputFilepath+"\\SpecSheet.xlsx")
+        global excelFilepath
+        excelFilepath = outputFilepath+"/SpecSheet.xlsx"
+    except:
+        print("Stinky Doo Doo output filepath")
+        return
+        
 def writeSpecs():
 
     #Create doc and style
@@ -99,27 +126,39 @@ def writeSpecs():
 
 
     #Open Revit output
-    wb = opx.load_workbook("./_ALL INCLUSIVE.xlsx", read_only=True)
+    try:
+        wb = opx.load_workbook(inputFilepath, read_only=True)
+    except:
+        print("Stinky POOPY input filepath")
+        return
     sheet = wb.active
 
-    #Open Specs reference file 
-    wbr = opx.load_workbook("./All AutoText Index2.xlsx", read_only=True)
+    #Open Specs reference file (optional?)
+    try:
+        wbr = opx.load_workbook(excelFilepath, read_only=True)
+    except:
+        print("FUCK I SUCK at entering the correct excel filepath")
+        return
     refSheet = wbr.active
 
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
 
-    specRefs = [[],[],[],[]]  #Holds [Desc., Manufacturer, Model#, refFile] from xl spec ref file
+    specRefs = [[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[]] from xl spec ref file
     for row in refSheet.rows:
-        specRefs[0].append(str(row[1].value).lower())
-        specRefs[1].append(str(row[3].value).lower())
-        specRefs[2].append(str(row[4].value).lower())
-        specRefs[3].append(row[10].value)
-
+        specRefs[0].append(str(row[0].value).lower())
+        specRefs[1].append(str(row[1].value).lower())
+        specRefs[2].append(str(row[2].value).lower())
+        print(row[3].value)
+        if row[3].value == None:
+            specRefs[3].append("")
+        else:
+            specRefs[3].append(str(row[3].value).split('\"')[3])
+        
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
         #Find header locations
         if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':
-            #If first row, get header indexes  
+            #If first row, get header indexes, or skip if no item information available
             if row[0].value == 'EQUIPMENT':
                 for i in range(len(row)):
                     match str(row[i].value):
@@ -333,12 +372,13 @@ def writeSpecs():
             #Add Header to doc
             p.add_run(run)
 
-            ambiguousModels = ["custom", "custom design"]
+            
+            ambiguousModels = ["custom", "custom design"] #Model No. that aren't specific to a model
+            #Make/find specs for item 
+
+            #Custom Fabrication Specs
             if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
                             
-
-
-
                 p = doc.add_paragraph('', style = 'Spec_Header')
                 remaining = (row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value))           
                 name = ""
@@ -368,6 +408,7 @@ def writeSpecs():
                 rr.font.color.rgb = d.shared.RGBColor(0xFF,0x00,0x00)
                 p.add_run(str(i+2) + ".\tMust meet all applicable federal, state, and local laws, rules, regulations and codes")
 
+                #Pretty much every possible spec for existing units without any logic to determine what's right (all red text instead)
                 '''
                 if row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value):           
                     p.add_run("Remain in place existing unit as follows:\n")
@@ -389,24 +430,26 @@ def writeSpecs():
                 #print(str(row[0].value) + " is existing")
                 '''
 
-
-            #if specs exist, copy and paste (Unless existing)
+#TODO: add conditional for custom .xlsx or .docx searching
+                
+            #if specs exist, copy and paste
             elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] 
-                and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels):
+                and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
                 #COPY AND PASTE FROM ASSOCIATED DOC
                 temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
-                                  + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx")
+                                  + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx") 
                 fullText = []
                 #print(specRefs[3][index])
                 #====Item# with specs====#
                 print("Specs found for item# " + str(row[0].value))
             
-
+                #Add Specs starting after the header
                 p = doc.add_paragraph('', style = 'Spec_Header')
                 i = 0
-                while "Utilities" not in temp.paragraphs[i].text:
+                while i< len(temp.paragraphs) and "Utilities" not in temp.paragraphs[i].text:
                     i = i + 1
-
+                    
+                #Go through each paragraph checking for alternately colored text
                 for para in temp.paragraphs[i+1:]:
                     p_runs = []
                     addRuns = False
@@ -445,20 +488,25 @@ def writeSpecs():
             elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
                 manuf = ""
                 highlight =False
+                #Check if specs exist for matching Manufacturer and Desc., and turn on highlighting
                 if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
                     #print("Manufac")
                     manuf = str(row[headerIndexes[0]+2].value).lower()
                     highlight = True
+                #Check if specs for custom fabrication item exists
                 elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
                     #print("Custom Fab")
                     manuf = "custom fabrication"
+                #If neither, skip
                 else:
                     continue
+                #Find specs which match for given item
                 for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
                     if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: #== specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
                 
                         #COPY AND PASTE FROM ASSOCIATED DOC
-                    
+                        if(specRefs[3][index] == ""):
+                            continue
                         temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
                                   + specRefs[3][index] + ".docx")
                         fullText = []
@@ -466,8 +514,11 @@ def writeSpecs():
 
                         p = doc.add_paragraph('', style = 'Spec_Header')
                         i = 0
+
+                        #Add everything after the header
                         while "Utilities" not in temp.paragraphs[i].text:
                             i = i + 1
+                        #Go through each paragraph looking for alternately colored text
                         for para in temp.paragraphs[i+1:]:
                             p_runs = []
                             addRuns = False
@@ -516,11 +567,115 @@ def writeSpecs():
     
                                            
                 #print("Maybe Specs found for item# " + str(row[0].value))
-    doc.save("temp.docx")
-frame = tk.Frame(root)
-frame.pack(padx=40, pady=40)
+
+    doc.save(outputFilepath+"\\Specs.docx")
 
 
+#GUI
+
+#Select Input File
+def getFilepath(inputLabel):
+    global inputFilepath
+    inputFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
+    inputLabel.config(text= "The input file is: " + inputFilepath)
+
+#Select Output Location
+def getOutputFolder(outputLabel):
+    global outputFilepath 
+    outputFilepath = filedialog.askdirectory()
+    outputLabel.config(text= "The output folder is: " + outputFilepath)
+
+#Select Excel File
+def getExcelFile(xlLabel):
+    global excelFilepath 
+    excelFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
+    xlLabel.config(text= "The excel file location is: " + excelFilepath)
+
+#Temporary Placeholder Function
+def Nothing():
+    pass
+
+#Create window for choosing functionality
+def selectionWindow():
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    frame = tk.Frame(root)
+    frame.pack()
+
+    findSpecButton = tk.Button(frame, text="Find Specs", command=fsWindow, height=2, width=15, bg= '#afafaf')
+    findSpecButton.pack(padx=80,pady=150,side=tk.LEFT)
+
+    writeSpecButton = tk.Button(frame, text="Write Specs", command=wsWindow, height=2, width=15, bg= '#afafaf')
+    writeSpecButton.pack(padx=80,pady=100,side=tk.RIGHT)
+
+#Create Window for Writing Specs Function
+def wsWindow():
+    for widget in root.winfo_children():
+        widget.destroy()
+        
+    backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
+    backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
+
+    padLabel = tk.Label(root, text="")
+    padLabel.grid(row=1,column=1, padx=80, pady=30)
+
+    infoLabel = tk.Label(root, text="Write Specs Document")
+    infoLabel.grid(row=1, column=3, sticky= 'N')
+
+    inputLabel = tk.Label(root, wraplength = 250, text="The input file is: " + inputFilepath)
+    inputLabel.grid(row=3, column=2, columnspan =3)
+
+    inputButton = tk.Button(root, text="Select Input File", command=lambda:getFilepath(inputLabel))
+    inputButton.grid(row=2, column=2, padx=10, pady=30)
+
+    outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
+    outputLabel.grid(row=4, column=2, columnspan =3)
+
+    outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
+    outputButton.grid(row=2, column=4, padx=10, pady=10)
+
+    xlLabel = tk.Label(root, wraplength = 250, text="The excel file location is: " + excelFilepath)
+    xlLabel.grid(row=5, column=2, columnspan =3)
+    
+    xlButton = tk.Button(root, text="Select Excel File", command=lambda:getExcelFile(xlLabel))
+    xlButton.grid(row=2, column=3, padx=10, pady=10)
+
+    submitButton = tk.Button(root, text="Create Specs", command=writeSpecs)
+    submitButton.grid(row=6, column = 3)
+
+#Create Window for Finding Specs Function
+def fsWindow():
+    for widget in root.winfo_children():
+        widget.destroy()
+        
+    backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
+    backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
+
+    padLabel = tk.Label(root, text="")
+    padLabel.grid(row=1,column=1, padx=80, pady=30)
+
+    infoLabel = tk.Label(root, text="Find Existing Specs")
+    infoLabel.grid(row=1, column=3, sticky= 'N')
+
+    inputButton = tk.Button(root, text="Select Input File", command=lambda:getFilepath(inputLabel))
+    inputButton.grid(row=2, column=2, padx=10, pady=30)
+
+    outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
+    outputButton.grid(row=2, column=4, padx=10, pady=10)
+
+    inputLabel = tk.Label(root, wraplength = 250, text="The input file is: " + inputFilepath)
+    inputLabel.grid(row=3, column=2, columnspan =3)
+
+    outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
+    outputLabel.grid(row=4, column=2, columnspan =3)
+
+    submitButton = tk.Button(root, text="Find Specs", command=findSpecs)
+    submitButton.grid(row=5, column = 3)
+
+selectionWindow()
+
+'''
 fileFrame = tk.Frame(root)
 fileFrame.pack()
 
@@ -553,5 +708,5 @@ in_file.pack(padx=10, pady=15, side=tk.LEFT)
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
 out_folder.pack(padx=10, pady=15, side=tk.LEFT)
 
-
+'''
 root.mainloop()
