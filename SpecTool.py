@@ -142,8 +142,8 @@ def writeSpecs():
     refSheet = wbr.active
 
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
-
-    specRefs = [[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[]] from xl spec ref file
+    yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
+    specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
     for row in refSheet.rows:
         specRefs[0].append(str(row[0].value).lower())
         specRefs[1].append(str(row[1].value).lower())
@@ -151,9 +151,15 @@ def writeSpecs():
         print(row[3].value)
         if row[3].value == None:
             specRefs[3].append("")
+            specRefs[4].append(False)
         else:
             specRefs[3].append(str(row[3].value).split('\"')[3])
-        
+            if row[0].fill == yellowFill:
+                specRefs[4].append(False)
+            else:
+                specRefs[4].append(True)
+    for l in specRefs:
+        print(l)
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
         #Find header locations
@@ -376,7 +382,7 @@ def writeSpecs():
             ambiguousModels = ["custom", "custom design"] #Model No. that aren't specific to a model
             #Make/find specs for item 
 
-            #Custom Fabrication Specs
+            #Existing Items Specs
             if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
                             
                 p = doc.add_paragraph('', style = 'Spec_Header')
@@ -433,7 +439,7 @@ def writeSpecs():
 #TODO: add conditional for custom .xlsx or .docx searching
                 
             #if specs exist, copy and paste
-            elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] 
+            elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                 and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
                 #COPY AND PASTE FROM ASSOCIATED DOC
                 temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
