@@ -28,11 +28,62 @@ root.geometry("800x400")
 
 
 
+def copySpecs(tempDocPath, p, highlight):
+    #COPY AND PASTE FROM ASSOCIATED DOC
+    temp = d.Document(tempDocPath)
+    fullText = []
+    i = 0
+
+    #Add everything after the header
+    while i< len(temp.paragraphs) and "Utilities" not in temp.paragraphs[i].text:
+        i = i + 1
+    #Go through each paragraph looking for alternately colored text
+    for para in temp.paragraphs[i+1:]:
+        p_runs = []
+        addRuns = False
+        for runS in para.runs:
+            if runS.font.color.rgb != d.shared.RGBColor(0x00, 0x00, 0x00) and runS.font.color.rgb != None:
+                if fullText:
+                    if highlight:
+                        p.add_run('\n'.join(fullText) + '\n').font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                    else:
+                        p.add_run('\n'.join(fullText) + '\n')
+                    fullText = []
+                if p_runs:
+                    if highlight:
+                        p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                    else:
+                        p.add_run(''.join(p_runs))
+                    p_runs = []
+                addRuns = True
+                redRun = p.add_run(runS.text)
+                redRun.font.color.rgb = runS.font.color.rgb
+                if highlight:
+                    redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+            else:
+                p_runs.append(runS.text)
+        if addRuns:
+            if highlight:
+                p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+            else:
+                p.add_run(''.join(p_runs))
+            addRuns = False
+        else:
+            fullText.append(para.text)
+        if not fullText:
+            p.add_run('\n')
+        p_runs = []
+    if highlight:
+        p.add_run('\n'.join(fullText)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+    else:
+        p.add_run('\n'.join(fullText))
+    #break
+
 def findSpecs():
     try:
         wb = opx.load_workbook(inputFilepath, read_only=True)
     except:
-        print("Stinky Doo Doo input filepath")
+        print("Input File Not Found... Please Check Input Filepath")
         return
     wbNew = opx.Workbook()
     newSheet = wbNew.active
@@ -40,7 +91,7 @@ def findSpecs():
     headerIndexes = [-1,-1,-1,-1]
     
     #TODO: Find more permanent place for these files
-    onlyfiles = [f for f in listdir("V:\\Temp\\Antonio\\Template Specs_Word Files") if isfile(join("V:\\Temp\\Antonio\\Template Specs_Word Files", f))]        
+    onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]        
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
     noFill = opx.styles.PatternFill(start_color = 'FFFFFF', end_color = 'FFFFFF', fill_type = 'solid')
@@ -63,7 +114,7 @@ def findSpecs():
                         case _:
                             pass
                 if -1 in headerIndexes:
-                    print("Header missing?!??!?!")
+                    print("One of the headers is missing!")
         #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
         elif row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
             continue
@@ -72,11 +123,11 @@ def findSpecs():
             
             specData = []
             #Manually fill field for custom fab
-            if row[headerIndexes[0]+5].value != None and "CUSTOM" in row[headerIndexes[0]+5].value:
+            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
                 specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
             #Fill fields with Excel values
             else:
-                specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, row[headerIndexes[0]+3].value]
+                specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
 
             #Add row to doc specific Excel file (Name, Manufacturer, Model No., Expected ".docx" filename)
             newSheet.append([specData[0], specData[1], specData[2], (str(specData[0])+"_"+ str(specData[1]) +"_"+ str(specData[2]))])
@@ -85,14 +136,14 @@ def findSpecs():
             for file in onlyfiles:
                 #If model number and manufacturer match or is custom fab and name matches, row background is white
                 if (specData[1] == "Custom Fabrication" and str(specData[0])+ "_Custom Fabrication" in file) or (str(specData[2]) in file and specData[2] != "" and str(specData[1]).lower() in file.lower() and specData[1] != ""):
-                    newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Temp\\Antonio\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
+                    newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = noFill
-                    print(file)
+                    #print(file)
                     break
                 #Elif manufacturer and name match, row background is yellow, and doc link is changed to the first (or last?) possible match
                 elif str(specData[0]).lower() + "_" + str(specData[1]).lower() in file.lower():
-                    newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Temp\\Antonio\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
+                    newSheet[rowIndex][3].value= "=HYPERLINK(\"[V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + str(file.split(".docx")[0]) + ".docx]\",\""+str(file.split(".docx")[0])+"\")" 
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = yellowFill
                     filled = True
@@ -110,11 +161,13 @@ def findSpecs():
         global excelFilepath
         excelFilepath = outputFilepath+"/SpecSheet.xlsx"
     except:
-        print("Stinky Doo Doo output filepath")
+        print("Output Folder not found... Please Check that Directory Exists")
         return
         
 def writeSpecs():
 
+    global excelFilepath
+    
     #Create doc and style
     doc = d.Document()
 
@@ -129,7 +182,7 @@ def writeSpecs():
     try:
         wb = opx.load_workbook(inputFilepath, read_only=True)
     except:
-        print("Stinky POOPY input filepath")
+        print("Input File Not Found... Please Check Input Filepath")
         return
     sheet = wb.active
 
@@ -137,29 +190,34 @@ def writeSpecs():
     try:
         wbr = opx.load_workbook(excelFilepath, read_only=True)
     except:
-        print("FUCK I SUCK at entering the correct excel filepath")
-        return
-    refSheet = wbr.active
-
+        print("The Excel File was not found... But that's OK")
+        excelFilepath = ""
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
-    for row in refSheet.rows:
-        specRefs[0].append(str(row[0].value).lower())
-        specRefs[1].append(str(row[1].value).lower())
-        specRefs[2].append(str(row[2].value).lower())
-        print(row[3].value)
-        if row[3].value == None:
-            specRefs[3].append("")
-            specRefs[4].append(False)
-        else:
-            specRefs[3].append(str(row[3].value).split('\"')[3])
-            if row[0].fill == yellowFill:
+    onlyfiles = []
+    refSheet = None
+    if excelFilepath:
+        refSheet = wbr.active
+        for row in refSheet.rows:
+            specRefs[0].append(str(row[0].value).lower())
+            specRefs[1].append(str(row[1].value).lower())
+            specRefs[2].append(str(row[2].value).lower())
+            #print(row[3].value)
+            if row[3].value == None:
+                specRefs[3].append("")
                 specRefs[4].append(False)
             else:
-                specRefs[4].append(True)
-    for l in specRefs:
-        print(l)
+                specRefs[3].append(str(row[3].value).split('\"')[3])
+                if row[0].fill == yellowFill:
+                    specRefs[4].append(False)
+                else:
+                    specRefs[4].append(True)
+    else:
+        onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]
+
+    #for l in specRefs:
+        #print(l)
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
         #Find header locations
@@ -240,11 +298,13 @@ def writeSpecs():
         
             #Manufacturer
             run = run + ("\nManufacturer:\t")
+
+            customFab = False
             
             #Check if custom fab
             if(row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
                 run = run + "Custom Fabrication"
-        
+                customFab=True
             else:
                 if(row[headerIndexes[0]+2].value == None):
                     run = run + ("---")
@@ -380,8 +440,12 @@ def writeSpecs():
 
             
             ambiguousModels = ["custom", "custom design"] #Model No. that aren't specific to a model
+
             #Make/find specs for item 
 
+            
+                
+            
             #Existing Items Specs
             if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
                             
@@ -435,65 +499,36 @@ def writeSpecs():
 
                 #print(str(row[0].value) + " is existing")
                 '''
-
-#TODO: add conditional for custom .xlsx or .docx searching
                 
+            #If excel sheet is not provided, search through docs for a match
+            elif excelFilepath == "":
+                maybeFilepath = ""
+                fileFound = False
+                for file in onlyfiles:
+                    #If model number and manufacturer match or is custom fab and name matches, row background is white
+                    if (customFab and str(row[headerIndexes[0]+4].value)+ "_Custom Fabrication" in file) or (str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-') in file and row[headerIndexes[0]+3].value != "" and str(row[headerIndexes[0]+2].value).lower() in file.lower() and row[headerIndexes[0]+2].value != ""):
+                        #open file, and copy specs
+                        copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + file, doc.add_paragraph('', style = 'Spec_Header'), False)
+                        fileFound = True
+                        break
+                    #Elif manufacturer and name match, row background is yellow, and doc link is changed to the first (or last?) possible match
+                    elif str(row[headerIndexes[0]+4].value).lower() + "_" + str(row[headerIndexes[0]+2].value).lower() in file.lower():
+                        maybeFilepath = "V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + file
+                if not fileFound and maybeFilepath != "":
+                    copySpecs(maybeFilepath, doc.add_paragraph('', style = 'Spec_Header'), True)
+                        
+                                        
             #if specs exist, copy and paste
             elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
-                and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
-                #COPY AND PASTE FROM ASSOCIATED DOC
-                temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
-                                  + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx") 
-                fullText = []
-                #print(specRefs[3][index])
-                #====Item# with specs====#
+                  and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
+
+                copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False)
                 print("Specs found for item# " + str(row[0].value))
-            
-                #Add Specs starting after the header
-                p = doc.add_paragraph('', style = 'Spec_Header')
-                i = 0
-                while i< len(temp.paragraphs) and "Utilities" not in temp.paragraphs[i].text:
-                    i = i + 1
-                    
-                #Go through each paragraph checking for alternately colored text
-                for para in temp.paragraphs[i+1:]:
-                    p_runs = []
-                    addRuns = False
-                    beginning = True
-                    for runS in para.runs:
-                        if runS.font.color.rgb != d.shared.RGBColor(0x00, 0x00, 0x00) and runS.font.color.rgb != None:
-                            if fullText:
-                                p.add_run('\n'.join(fullText) + '\n')
-                                fullText = []
-                            if beginning:
-                                beginning = False
-                                #p.add_run('\n')
-                            if p_runs:
-                                p.add_run(''.join(p_runs))
-    
-                            p_runs = []
-                            addRuns = True
-                            redRun = p.add_run(runS.text)
-                            redRun.font.color.rgb = runS.font.color.rgb
-                        else:
-                            p_runs.append(runS.text)
-                    if addRuns:
-                        p.add_run(''.join(p_runs))
-                        #p.add_run('\n')
-                        addRuns = False
-                    else:
-                        fullText.append(para.text)
-                    if not fullText:
-                        p.add_run('\n')
-                    p_runs = []
-
-                p.add_run('\n'.join(fullText))
                 
-
             # If Manufacturer and Desc. match, copy and highlight specs
             elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
                 manuf = ""
-                highlight =False
+                highlight = False
                 #Check if specs exist for matching Manufacturer and Desc., and turn on highlighting
                 if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
                     #print("Manufac")
@@ -513,65 +548,8 @@ def writeSpecs():
                         #COPY AND PASTE FROM ASSOCIATED DOC
                         if(specRefs[3][index] == ""):
                             continue
-                        temp = d.Document("V:\\Temp\\Antonio\\Template Specs_Word Files\\" 
-                                  + specRefs[3][index] + ".docx")
-                        fullText = []
-                        
-
-                        p = doc.add_paragraph('', style = 'Spec_Header')
-                        i = 0
-
-                        #Add everything after the header
-                        while "Utilities" not in temp.paragraphs[i].text:
-                            i = i + 1
-                        #Go through each paragraph looking for alternately colored text
-                        for para in temp.paragraphs[i+1:]:
-                            p_runs = []
-                            addRuns = False
-                            beginning = True
-                            for runS in para.runs:
-                                if runS.font.color.rgb != d.shared.RGBColor(0x00, 0x00, 0x00):
-                                    if fullText:
-                                        if highlight:
-                                            p.add_run('\n'.join(fullText) + '\n').font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-                                        else:
-                                            p.add_run('\n'.join(fullText) + '\n')
-                                        fullText = []
-                                    if beginning:
-                                        beginning = False
-                                        #p.add_run('\n')
-                                    if p_runs:
-                                        if highlight:
-                                            p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-                                        else:
-                                            p.add_run(''.join(p_runs))
-                                    p_runs = []
-                                    addRuns = True
-                                    redRun = p.add_run(runS.text)
-                                    redRun.font.color.rgb = runS.font.color.rgb
-                                    if highlight:
-                                        redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-                                else:
-                                    p_runs.append(runS.text)
-                            if addRuns:
-                                if highlight:
-                                    p.add_run(''.join(p_runs)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-                                else:
-                                    p.add_run(''.join(p_runs))
-                                #p.add_run('\n')
-                                addRuns = False
-                            else:
-                                fullText.append(para.text)
-                            if not fullText:
-                                p.add_run('\n')
-                            p_runs = []
-                        if highlight:
-                            p.add_run('\n'.join(fullText)).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-                        else:
-                            p.add_run('\n'.join(fullText))
-                        break
-    
-                                           
+                        copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight)
+                        break                           
                 #print("Maybe Specs found for item# " + str(row[0].value))
 
     doc.save(outputFilepath+"\\Specs.docx")
@@ -644,11 +622,11 @@ def wsWindow():
     xlLabel = tk.Label(root, wraplength = 250, text="The excel file location is: " + excelFilepath)
     xlLabel.grid(row=5, column=2, columnspan =3)
     
-    xlButton = tk.Button(root, text="Select Excel File", command=lambda:getExcelFile(xlLabel))
+    xlButton = tk.Button(root, text="Select Excel File\n(Optional)", command=lambda:getExcelFile(xlLabel))
     xlButton.grid(row=2, column=3, padx=10, pady=10)
 
     submitButton = tk.Button(root, text="Create Specs", command=writeSpecs)
-    submitButton.grid(row=6, column = 3)
+    submitButton.grid(row=6, column = 3, pady = 20)
 
 #Create Window for Finding Specs Function
 def fsWindow():
@@ -677,7 +655,10 @@ def fsWindow():
     outputLabel.grid(row=4, column=2, columnspan =3)
 
     submitButton = tk.Button(root, text="Find Specs", command=findSpecs)
-    submitButton.grid(row=5, column = 3)
+    submitButton.grid(row=5, column = 3, pady = 20)
+
+    messageLabel = tk.Label(root, text="")
+    messageLabel.grid(row=6, column = 2, columnspan = 3)
 
 selectionWindow()
 
