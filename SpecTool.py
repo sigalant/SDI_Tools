@@ -24,16 +24,16 @@ excelFilepath = ""
 root = tk.Tk()
 
 root.title("SDI Specs Formatting Tool")
-root.geometry("800x400")
-
-
+root.geometry("800x500")
+ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 
 def copySpecs(tempDocPath, p, highlight):
     #COPY AND PASTE FROM ASSOCIATED DOC
     temp = d.Document(tempDocPath)
     fullText = []
     i = 0
-
     #Add everything after the header
     while i< len(temp.paragraphs) and "Utilities" not in temp.paragraphs[i].text:
         i = i + 1
@@ -79,11 +79,13 @@ def copySpecs(tempDocPath, p, highlight):
         p.add_run('\n'.join(fullText))
     #break
 
-def findSpecs():
+def findSpecs(msgLabel):
+    msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
     try:
         wb = opx.load_workbook(inputFilepath, read_only=True)
-    except:
+    except Exception as e:
         print("Input File Not Found... Please Check Input Filepath")
+        msgLabel.config(text="Error: Input File not found")
         return
     wbNew = opx.Workbook()
     newSheet = wbNew.active
@@ -114,7 +116,7 @@ def findSpecs():
                         case _:
                             pass
                 if -1 in headerIndexes:
-                    print("One of the headers is missing!")
+                    msgLabel.config(text="Warning: One of the headers is missing from the input file")
         #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
         elif row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
             continue
@@ -157,14 +159,16 @@ def findSpecs():
 
     #Save new Specs Worksheet
     try:
-        wbNew.save(outputFilepath+"\\SpecSheet.xlsx")
+        wbNew.save(outputFilepath+"\\SpecRefSheet.xlsx")
         global excelFilepath
         excelFilepath = outputFilepath+"/SpecSheet.xlsx"
     except:
         print("Output Folder not found... Please Check that Directory Exists")
+        msgLabel.config(text="Error: Output Folder not found")
         return
+    msgLabel.config(text="Successfully Created Spec Ref Sheet")
         
-def writeSpecs():
+def writeSpecs(msgLabel):
 
     global excelFilepath
     
@@ -177,12 +181,13 @@ def writeSpecs():
     header_font.size = d.shared.Pt(10)
     header_font.name = 'Univers LT Std 55'
 
-
+    msgLabel.config(text="Error: Please confirm input file is correct")
     #Open Revit output
     try:
         wb = opx.load_workbook(inputFilepath, read_only=True)
     except:
         print("Input File Not Found... Please Check Input Filepath")
+        msgLabel.config(text="Error: Input File not found")
         return
     sheet = wb.active
 
@@ -190,6 +195,7 @@ def writeSpecs():
     try:
         wbr = opx.load_workbook(excelFilepath, read_only=True)
     except:
+        msgLabel.config(text="Warning: Spec Ref Sheet not found (Specs found manually)")
         print("The Excel File was not found... But that's OK")
         excelFilepath = ""
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
@@ -551,9 +557,12 @@ def writeSpecs():
                         copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight)
                         break                           
                 #print("Maybe Specs found for item# " + str(row[0].value))
-
-    doc.save(outputFilepath+"\\Specs.docx")
-
+    try:
+        doc.save(outputFilepath+"\\Specs.docx")
+    except:
+        msgLabel.config(text="Error: Output Folder not found")
+        return
+    msgLabel.config(text="Successfully Created Specs Document")
 
 #GUI
 
@@ -573,7 +582,7 @@ def getOutputFolder(outputLabel):
 def getExcelFile(xlLabel):
     global excelFilepath 
     excelFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
-    xlLabel.config(text= "The excel file location is: " + excelFilepath)
+    xlLabel.config(text= "The ref sheet location is: " + excelFilepath)
 
 #Temporary Placeholder Function
 def Nothing():
@@ -604,6 +613,9 @@ def wsWindow():
     padLabel = tk.Label(root, text="")
     padLabel.grid(row=1,column=1, padx=80, pady=30)
 
+    messageLabel = tk.Label(root, text="")
+    messageLabel.grid(row=7, column = 2, columnspan = 3)
+
     infoLabel = tk.Label(root, text="Write Specs Document")
     infoLabel.grid(row=1, column=3, sticky= 'N')
 
@@ -619,22 +631,27 @@ def wsWindow():
     outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
     outputButton.grid(row=2, column=4, padx=10, pady=10)
 
-    xlLabel = tk.Label(root, wraplength = 250, text="The excel file location is: " + excelFilepath)
+    xlLabel = tk.Label(root, wraplength = 250, text="The ref sheet location is: " + excelFilepath)
     xlLabel.grid(row=5, column=2, columnspan =3)
     
-    xlButton = tk.Button(root, text="Select Excel File\n(Optional)", command=lambda:getExcelFile(xlLabel))
+    xlButton = tk.Button(root, text="Select Ref Sheet\n(Optional)", command=lambda:getExcelFile(xlLabel))
     xlButton.grid(row=2, column=3, padx=10, pady=10)
 
-    submitButton = tk.Button(root, text="Create Specs", command=writeSpecs)
+    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel))
     submitButton.grid(row=6, column = 3, pady = 20)
 
 #Create Window for Finding Specs Function
 def fsWindow():
     for widget in root.winfo_children():
         widget.destroy()
+
+    
         
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
+
+    messageLabel = tk.Label(root, text="")
+    messageLabel.grid(row=6, column = 2, columnspan = 3)
 
     padLabel = tk.Label(root, text="")
     padLabel.grid(row=1,column=1, padx=80, pady=30)
@@ -654,11 +671,10 @@ def fsWindow():
     outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
     outputLabel.grid(row=4, column=2, columnspan =3)
 
-    submitButton = tk.Button(root, text="Find Specs", command=findSpecs)
+    submitButton = tk.Button(root, text="Find Specs", command=lambda:findSpecs(messageLabel))
     submitButton.grid(row=5, column = 3, pady = 20)
 
-    messageLabel = tk.Label(root, text="")
-    messageLabel.grid(row=6, column = 2, columnspan = 3)
+
 
 selectionWindow()
 
