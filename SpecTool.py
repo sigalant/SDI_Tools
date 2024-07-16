@@ -3,7 +3,8 @@
 #06/26/2024
 
 #Imports
-import SpecDB
+import SpecDB as db
+from tinydb import TinyDB, Query
 
 import docx as d
 import openpyxl as opx
@@ -20,7 +21,7 @@ from os.path import isfile, join
 #input/output locations
 inputFilepath = ""
 outputFilepath = ""
-excelFilepath = ""
+#excelFilepath = ""
 
 #tkinter root window
 root = tk.Tk()
@@ -97,8 +98,8 @@ def findSpecs(msgLabel):
     sheet = wb.active
     headerIndexes = [-1,-1,-1,-1]
     
-    #TODO: Find more permanent place for these files
-    onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]        
+    #Find more permanent place for these files
+    #onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]        
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
     noFill = opx.styles.PatternFill(start_color = 'FFFFFF', end_color = 'FFFFFF', fill_type = 'solid')
@@ -143,9 +144,33 @@ def findSpecs(msgLabel):
                 specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
 
             #Add row to doc specific Excel file (Name, Manufacturer, Model No., Expected ".docx" filename)
-            newSheet.append([specData[0], specData[1], specData[2], (str(specData[0])+"_"+ str(specData[1]) +"_"+ str(specData[2]))])
+            newSheet.append([specData[0], specData[1], specData[2], ''])#(str(specData[0])+"_"+ str(specData[1]) +"_"+ str(specData[2]))])
             rowIndex = newSheet.max_row #current row
-            filled = False #To avoid highlighting same row multiple times
+            #filled = False #To avoid highlighting same row multiple times
+            matches = []
+            if specData[1] == "Custom Fabrication":
+                matches = db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+            else:
+                matches = db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+            if matches:
+                newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+                for i in range(0,4):
+                    newSheet[rowIndex][i].fill = noFill
+                #print("Something is working...")
+                if len(matches) > 1:
+                    print(matches)
+            else:
+                #Check partial matches
+                matches = db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                if matches:
+                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+                    for i in range(0,4):
+                        newSheet[rowIndex][i].fill = yellowFill
+                else:
+                    for i in range(0,4):
+                        newSheet[rowIndex][i].fill = redFill
+            
+            '''
             for file in onlyfiles:
                 #If model number and manufacturer match or is custom fab and name matches, row background is white
                 if (specData[1] == "Custom Fabrication" and str(specData[0])+ "_Custom Fabrication" in file) or (str(specData[2]) in file and specData[2] != "" and str(specData[1]).lower() in file.lower() and specData[1] != ""):
@@ -167,7 +192,7 @@ def findSpecs(msgLabel):
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = redFill
                     filled = True
-
+            '''
     #Save new Specs Worksheet
     try:
         wbNew.save(outputFilepath+"\\SpecRefSheet.xlsx")
@@ -526,6 +551,33 @@ def writeSpecs(msgLabel):
                 
             #If excel sheet is not provided, search through docs for a match
             elif excelFilepath == "":
+                specData = []
+                #Manually fill field for custom fab
+                if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
+                    specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
+                #Fill fields with Excel values
+                else:
+                    specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
+
+                matches = []
+                if specData[1] == "Custom Fabrication":
+                    matches = db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+                else:
+                    matches = db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                if matches:
+                    #Match found
+                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+                    if len(matches) > 1:
+                        #Multiple matches
+                        print(matches)
+                else:
+                    #Check partial matches
+                    matches = db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                    if matches:
+                        #maybe found
+                    else:
+                        #Not found
+                
                 maybeFilepath = ""
                 fileFound = False
                 for file in onlyfiles:

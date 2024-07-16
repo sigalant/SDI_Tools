@@ -73,4 +73,4 @@ def FindEntry():
     pass
 
 if __name__ == '__main__':
-    addEntries()
+    addEntries("V:\\Specs\\Specs Script\\Template Specs_Word Files")
