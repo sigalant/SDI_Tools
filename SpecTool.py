@@ -3,6 +3,8 @@
 #06/26/2024
 
 #Imports
+import SpecDB
+
 import docx as d
 import openpyxl as opx
 import num2words as n2m
@@ -87,6 +89,9 @@ def findSpecs(msgLabel):
         print("Input File Not Found... Please Check Input Filepath")
         msgLabel.config(text="Error: Input File not found")
         return
+    if outputFilepath == "":
+        msgLabel.config(text="Error: Select Output Location")
+        return
     wbNew = opx.Workbook()
     newSheet = wbNew.active
     sheet = wb.active
@@ -100,6 +105,7 @@ def findSpecs(msgLabel):
     
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
+        
         #Find header locations
         if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':  
             if row[0].value == 'EQUIPMENT':
@@ -117,8 +123,13 @@ def findSpecs(msgLabel):
                             pass
                 if -1 in headerIndexes:
                     msgLabel.config(text="Warning: One of the headers is missing from the input file")
+            continue
+        try:
+            nothing = row[1].value == None or "spare" in row[4].value.lower()
+        except:
+            return
         #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
-        elif row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
+        if row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
             continue
         #Collect Name, Manufacturer, and Model No. for finding/matching a Spec ".docx" file
         else:
@@ -161,10 +172,10 @@ def findSpecs(msgLabel):
     try:
         wbNew.save(outputFilepath+"\\SpecRefSheet.xlsx")
         global excelFilepath
-        excelFilepath = outputFilepath+"/SpecSheet.xlsx"
-    except:
-        print("Output Folder not found... Please Check that Directory Exists")
-        msgLabel.config(text="Error: Output Folder not found")
+        excelFilepath = outputFilepath+"/SpecRefSheet.xlsx"
+    except Exception as e:
+        print(e)
+        msgLabel.config(text="Error: Cannot Save SpecRefSheet.xlsx while file is open")
         return
     msgLabel.config(text="Successfully Created Spec Ref Sheet")
         
@@ -189,13 +200,16 @@ def writeSpecs(msgLabel):
         print("Input File Not Found... Please Check Input Filepath")
         msgLabel.config(text="Error: Input File not found")
         return
+    if outputFilepath == '':
+        msgLabel.config(text="Error: Select Output location")
+        return
     sheet = wb.active
 
     #Open Specs reference file (optional?)
     try:
         wbr = opx.load_workbook(excelFilepath, read_only=True)
     except:
-        msgLabel.config(text="Warning: Spec Ref Sheet not found (Specs found manually)")
+        #msgLabel.config(text="Warning: Spec Ref Sheet not found (Specs found manually)")
         print("The Excel File was not found... But that's OK")
         excelFilepath = ""
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
@@ -268,7 +282,11 @@ def writeSpecs(msgLabel):
             #Item Number and Description
             run = run + ("ITEM #" + str(row[headerIndexes[0]].value) + ":")
             run = run + ("\t" + str(row[headerIndexes[0]+4].value))
-        
+            try:
+                row[headerIndexes[0]+5].value != None
+                "SPARE NUMBER" in row[headerIndexes[0]+4].value
+            except:
+                return
             #Check if not in contract
             if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower()):
                 run = run + " (NOT IN CONTRACT)"
@@ -346,8 +364,8 @@ def writeSpecs(msgLabel):
             is_empty = True
 
         #Plumbing    
-            if(row[headerIndexes[2]+9].value != None and row[headerIndexes[2]+9].value[0] == "-" and row[headerIndexes[2]+4].value == None):
-                run = run + (str(row[headerIndexes[2]+8].value + " drain recessed " + str(row[headerIndexes[2]+9].value)[1:]))
+            if(row[headerIndexes[2]+9].value != None and str(row[headerIndexes[2]+9].value)[0] == "-" and row[headerIndexes[2]+4].value == None):
+                run = run + (str(row[headerIndexes[2]+8].value) + " drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
                 is_empty = False
         
         #Electrical
@@ -426,7 +444,7 @@ def writeSpecs(msgLabel):
             if row[headerIndexes[2]+11].value != None:
                 if not is_empty:
                     run = run + "; "
-                run = run + row[headerIndexes[2]+11].value + " Gas @ " + str(row[headerIndexes[2]+12].value) + " BTU; " + str(row[headerIndexes[2]+13].value) + " WC"
+                run = run + str(row[headerIndexes[2]+11].value) + " Gas @ " + str(row[headerIndexes[2]+12].value) + " BTU; " + str(row[headerIndexes[2]+13].value) + " WC"
                 is_empty = False
     
             #Chilled Water
@@ -560,7 +578,7 @@ def writeSpecs(msgLabel):
     try:
         doc.save(outputFilepath+"\\Specs.docx")
     except:
-        msgLabel.config(text="Error: Output Folder not found")
+        msgLabel.config(text="Error: Cannot save Specs.docx while file is open")
         return
     msgLabel.config(text="Successfully Created Specs Document")
 
