@@ -95,7 +95,6 @@ def formatFile():
     #Fill 2D Array (Maybe linkedlist/Hash) with information
 
     data = []
-    #data = [["Item", "Qty", "Description", "Model", "Unit Cost", "Total", "Remarks"]]
 
     for row in sheet.rows:
         rowData = []
@@ -107,6 +106,17 @@ def formatFile():
                 rowData.append(row[item-1].value)
             except Exception:
                 rowData.append("")
+        if rowData[2] != None: 
+            rowData[2] = rowData[2].upper()
+            if rowData[2] == "SPARENO":
+                rowData[2] = 'SpareNo'
+                rowData[1] = '-'
+                rowData[3] = ''
+            #    rowData[4] = ''
+        if "os&e" in str(rowData[6]).lower() or "vendor" in str(rowData[6]).lower():
+            rowData[3] = 'NIC'
+            #rowData[4] = 'NIC'
+
         data.append(rowData)
         
 
@@ -236,6 +246,8 @@ def formatFile():
             sheetNew[("H"+str(rowNum))] = data[i][4]
             sheetNew['H'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text=True)
             sheetNew[("H"+str(rowNum))].font = opx.styles.Font(color = '595959')
+            sheetNew['E'+str(rowNum)].alignment = opx.styles.Alignment(horizontal = 'right', vertical = 'center')
+            sheetNew['F'+str(rowNum)].alignment = opx.styles.Alignment(horizontal = 'right', vertical = 'center')
         rowNum = rowNum+1
 
     for i in range(6):
