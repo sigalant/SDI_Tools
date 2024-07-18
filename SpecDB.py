@@ -1,11 +1,10 @@
-from tinydb import TinyDB, Query, where
+import sqlite3
 import docx as d
 from os import listdir
 from os.path import isfile, join
 
-db = TinyDB('./SpecDB.json')
-itemTable = db.table('Items')
-specTable = db.table('Specs')
+#desc manu model doc
+#doc text
 
 #Take Docx file and convert into String
 def parseSpecs(file):
@@ -40,25 +39,32 @@ def parseSpecs(file):
     return docText
 
 #Add new entry into DB
-def addEntry(info):
-    global itemTable
-    global specTable
+def addEntry(info, cur):
+    
     #Ignore if entry already exists
-    if(itemTable.search(Query().fragment({'Word_Doc':info[3], 'Model_No.':info[2]}))):
+    query = ("SELECT doc FROM item WHERE doc='" +str(info[3]) +"'")
+    print(query)
+    res = cur.execute(query)
+    if(res.fetchone()): 
         print("Entry for " + info[0] + ":" + info[2] + " already exists.")
     else:
         #Add Entry
-        itemTable.insert({'Description': info[0], 'Manufacturer': info[1], 'Model_No.': info[2], 'Word_Doc': info[3]})
+        cur.execute("INSERT INTO item VALUES ('" + str(info[0]) + "','" + str(info[1]) + "','" + str(info[2]) + "','" + str(info[3])+ "')")
+
         specText = parseSpecs(info[3])
-        specTable.insert({'Word_Doc': info[3], 'Spec_Text':specText})
+        specText = specText.replace("'", "''").replace('"','""')
+        
+        query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\')")
+        cur.execute(query2)
 
 #Add entries from folder
-def addEntries(folderPath):
+def addEntries(folderPath, cur):
     onlyfiles = [f for f in listdir(folderPath) if isfile(join(folderPath, f))]
     for f in listdir(folderPath):
+        f = f.replace("'", "''").replace('"','""')
         splitFile = f.split('_')
         if isfile(join(folderPath, f)) and len(splitFile) == 3 and '$' not in splitFile[0]:
-            addEntry([splitFile[0], splitFile[1], splitFile[2].split('.')[0], join(folderPath, f)])
+            addEntry([splitFile[0], splitFile[1], splitFile[2].split('.docx')[0], join(folderPath, f)],cur)
 
 #TODO: take entry and docx file, then change docx path and doc text in DB (or delete and recreate)
 def ModifyEntry():
@@ -73,4 +79,8 @@ def FindEntry():
     pass
 
 if __name__ == '__main__':
-    addEntries("V:\\Specs\\Specs Script\\Template Specs_Word Files")
+    con = sqlite3.connect("SpecDB.db")
+    cur = con.cursor()
+    addEntries("V:\\Specs\\Specs Script\\Template Specs_Word Files", cur)
+    con.commit()
+    con.close()

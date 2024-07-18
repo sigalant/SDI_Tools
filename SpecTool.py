@@ -4,7 +4,8 @@
 
 #Imports
 import SpecDB as db
-from tinydb import TinyDB, Query
+import sqlite3
+#from tinydb import TinyDB, Query
 
 import docx as d
 import openpyxl as opx
@@ -83,6 +84,8 @@ def copySpecs(tempDocPath, p, highlight):
     #break
 
 def findSpecs(msgLabel):
+    con = sqlite3.connect("SpecDB.db")
+    cur = con.cursor()
     msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
     try:
         wb = opx.load_workbook(inputFilepath, read_only=True)
@@ -134,7 +137,7 @@ def findSpecs(msgLabel):
             continue
         #Collect Name, Manufacturer, and Model No. for finding/matching a Spec ".docx" file
         else:
-            
+            ambiguousModels = ["custom", "custom design"]
             specData = []
             #Manually fill field for custom fab
             if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
@@ -149,21 +152,29 @@ def findSpecs(msgLabel):
             #filled = False #To avoid highlighting same row multiple times
             matches = []
             if specData[1] == "Custom Fabrication":
-                matches = db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+                matches = cur.execute("SELECT doc FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()#db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
             else:
-                matches = db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                matches = cur.execute("SELECT doc FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()#db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+            #if "22CG" in specData[2]:
+                #print(matches)
             if matches:
-                newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+
+                newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('\\')[len(matches[0][0].split('\\'))-1].split('.docx')[0] +"\")"
                 for i in range(0,4):
                     newSheet[rowIndex][i].fill = noFill
                 #print("Something is working...")
                 if len(matches) > 1:
-                    print(matches)
+                    pass#print(matches)
             else:
                 #Check partial matches
-                matches = db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
+                    matches = cur.execute("SELECT doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
+                if not matches: 
+                    matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()#db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                else:
+                    print(matches)
                 if matches:
-                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('\\')[len(matches[0][0].split('\\'))-1].split('.docx')[0] +"\")"
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = yellowFill
                 else:
@@ -574,8 +585,10 @@ def writeSpecs(msgLabel):
                     #Check partial matches
                     matches = db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
                     if matches:
+                        pass
                         #maybe found
                     else:
+                        pass
                         #Not found
                 
                 maybeFilepath = ""
