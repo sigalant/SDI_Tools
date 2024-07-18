@@ -22,7 +22,7 @@ from os.path import isfile, join
 #input/output locations
 inputFilepath = ""
 outputFilepath = ""
-#excelFilepath = ""
+excelFilepath = ""
 
 #tkinter root window
 root = tk.Tk()
@@ -33,14 +33,43 @@ ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
-def copySpecs(tempDocPath, p, highlight):
+def copySpecs(tempDocPath, p, highlight, cur):
     #COPY AND PASTE FROM ASSOCIATED DOC
     temp = d.Document(tempDocPath)
     fullText = []
     i = 0
+    
+    specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
+    
+    while i<len(specText) and "Utilities" not in specText[i]:
+        i = i + 1
+    if (len(("\n".join(specText[i+1:])).split('~')) - 1)%3 != 0:
+        specText = ["\n".join(specText[i+1:])]
+    else:
+        specText = ("\n".join(specText[i+1:])).split('~')
+    j=0
+    while j < len(specText):
+        if j%3 == 0:
+            if(highlight):
+                p.add_run(specText[j]).font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+            else:
+                p.add_run(specText[j])
+        else:
+            r=int(specText[j+1][:2], 16)
+            g=int(specText[j+1][2:4],16)
+            b=int(specText[j+1][4:6],16)
+            
+            redRun = p.add_run(specText[j])
+            redRun.font.color.rgb = d.shared.RGBColor(r,g,b)
+            if highlight:
+                redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+            j= j+1
+        j=j+1
+    '''
     #Add everything after the header
     while i< len(temp.paragraphs) and "Utilities" not in temp.paragraphs[i].text:
         i = i + 1
+        
     #Go through each paragraph looking for alternately colored text
     for para in temp.paragraphs[i+1:]:
         p_runs = []
@@ -82,7 +111,7 @@ def copySpecs(tempDocPath, p, highlight):
     else:
         p.add_run('\n'.join(fullText))
     #break
-
+    '''
 def findSpecs(msgLabel):
     con = sqlite3.connect("SpecDB.db")
     cur = con.cursor()
@@ -314,7 +343,7 @@ def writeSpecs(msgLabel):
         
 
             run = "" #To hold all text for each header
-        
+            #print(str(row[headerIndexes[0]].value))
             #Item Number and Description
             run = run + ("ITEM #" + str(row[headerIndexes[0]].value) + ":")
             run = run + ("\t" + str(row[headerIndexes[0]+4].value))
@@ -562,6 +591,8 @@ def writeSpecs(msgLabel):
                 
             #If excel sheet is not provided, search through docs for a match
             elif excelFilepath == "":
+                con = sqlite3.connect("specDB.db")
+                cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
                 if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
@@ -572,74 +603,62 @@ def writeSpecs(msgLabel):
 
                 matches = []
                 if specData[1] == "Custom Fabrication":
-                    matches = db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+                    matches = cur.execute("SELECT doc FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()#db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
                 else:
-                    matches = db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                    matches = cur.execute("SELECT doc FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()#db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                #if "22CG" in specData[2]:
+                    #print(matches)
                 if matches:
-                    #Match found
-                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0]['Word_Doc'] + "]\",\""+ matches[0]['Word_Doc'].split('\\')[len(matches[0]['Word_Doc'].split('\\'))-1].split('.docx')[0] +"\")"
+                    
+                    copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    
                     if len(matches) > 1:
-                        #Multiple matches
-                        print(matches)
+                        pass#print(matches)
                 else:
                     #Check partial matches
-                    matches = db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                    if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
+                        matches = cur.execute("SELECT doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
+                    if not matches: 
+                        matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()#db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
                     if matches:
-                        pass
-                        #maybe found
+                        copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
+                
+            else:
+                con = sqlite3.connect("specDB.db")
+                cur = con.cursor()
+                #if specs exist, copy and paste    
+                if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
+                      and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
+                    
+                    copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    #print("Specs found for item# " + str(row[0].value))
+                    
+                # If Manufacturer and Desc. match, copy and highlight specs
+                elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
+                    manuf = ""
+                    highlight = False
+                    #Check if specs exist for matching Manufacturer and Desc., and turn on highlighting
+                    if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
+                        #print("Manufac")
+                        manuf = str(row[headerIndexes[0]+2].value).lower()
+                        highlight = True
+                    #Check if specs for custom fabrication item exists
+                    elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
+                        #print("Custom Fab")
+                        manuf = "custom fabrication"
+                    #If neither, skip
                     else:
-                        pass
-                        #Not found
-                
-                maybeFilepath = ""
-                fileFound = False
-                for file in onlyfiles:
-                    #If model number and manufacturer match or is custom fab and name matches, row background is white
-                    if (customFab and str(row[headerIndexes[0]+4].value)+ "_Custom Fabrication" in file) or (str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-') in file and row[headerIndexes[0]+3].value != "" and str(row[headerIndexes[0]+2].value).lower() in file.lower() and row[headerIndexes[0]+2].value != ""):
-                        #open file, and copy specs
-                        copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + file, doc.add_paragraph('', style = 'Spec_Header'), False)
-                        fileFound = True
-                        break
-                    #Elif manufacturer and name match, row background is yellow, and doc link is changed to the first (or last?) possible match
-                    elif str(row[headerIndexes[0]+4].value).lower() + "_" + str(row[headerIndexes[0]+2].value).lower() in file.lower():
-                        maybeFilepath = "V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + file
-                if not fileFound and maybeFilepath != "":
-                    copySpecs(maybeFilepath, doc.add_paragraph('', style = 'Spec_Header'), True)
-                        
-                                        
-            #if specs exist, copy and paste
-            elif (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
-                  and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
-
-                copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False)
-                print("Specs found for item# " + str(row[0].value))
-                
-            # If Manufacturer and Desc. match, copy and highlight specs
-            elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
-                manuf = ""
-                highlight = False
-                #Check if specs exist for matching Manufacturer and Desc., and turn on highlighting
-                if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
-                    #print("Manufac")
-                    manuf = str(row[headerIndexes[0]+2].value).lower()
-                    highlight = True
-                #Check if specs for custom fabrication item exists
-                elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
-                    #print("Custom Fab")
-                    manuf = "custom fabrication"
-                #If neither, skip
-                else:
-                    continue
-                #Find specs which match for given item
-                for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
-                    if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: #== specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
-                
-                        #COPY AND PASTE FROM ASSOCIATED DOC
-                        if(specRefs[3][index] == ""):
-                            continue
-                        copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight)
-                        break                           
-                #print("Maybe Specs found for item# " + str(row[0].value))
+                        continue
+                    #Find specs which match for given item
+                    for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
+                        if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: #== specRefs[0].index(row[headerIndexes[0]+4].value.lower()):
+                    
+                            #COPY AND PASTE FROM ASSOCIATED DOC
+                            if(specRefs[3][index] == ""):
+                                continue
+                            copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight,cur)
+                            break                           
+                    #print("Maybe Specs found for item# " + str(row[0].value))
     try:
         doc.save(outputFilepath+"\\Specs.docx")
     except:
@@ -666,6 +685,7 @@ def getExcelFile(xlLabel):
     global excelFilepath 
     excelFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
     xlLabel.config(text= "The ref sheet location is: " + excelFilepath)
+
 
 #Temporary Placeholder Function
 def Nothing():
@@ -756,7 +776,6 @@ def fsWindow():
 
     submitButton = tk.Button(root, text="Find Specs", command=lambda:findSpecs(messageLabel))
     submitButton.grid(row=5, column = 3, pady = 20)
-
 
 
 selectionWindow()

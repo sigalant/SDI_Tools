@@ -67,17 +67,37 @@ def addEntries(folderPath, cur):
             addEntry([splitFile[0], splitFile[1], splitFile[2].split('.docx')[0], join(folderPath, f)],cur)
 
 #TODO: take entry and docx file, then change docx path and doc text in DB (or delete and recreate)
-def ModifyEntry():
+def ModifyEntry(entry, changes):
     pass
 
-#TODO: take entry and remove from DB
-def DeleteEntry():
-    pass
+#Take entry and remove from DB
+#change to test all fields?
+def DeleteEntry(entry, cur):
+    cur.execute("DELETE FROM item WHERE doc='" + entry + "'")
+    cur.execute("DELETE FROM spec WHERE doc='" + entry + "'")
 
-#TODO: Take argument for some field and return any entries that match 
-def FindEntry():
-    pass
+#Take argument for some field and return any entries that match 
+def FindEntry(fields, cur):
+    #[desc, manu, model, doc]
+    conditionals = []
+    if fields[0]:
+        conditionals.append("desc='" + fields[0] + "'")
+    if fields[1]:
+        conditionals.append("manu='" + fields[1] + "'")
+    if fields[2]:
+        conditionals.append("model='" + fields[2] + "'")
+    if fields[3]:
+        conditionals.append("doc='" + fields[3] + "'")
+    cond = " AND ".join(conditionals)
+    return cur.execute("SELECT desc, manu, model, doc FROM item WHERE " + cond).fetchall()
+    
 
+#Re-read Specs '.docx' file and write contents to spec table
+def UpdateSpecs(doc, cur):
+    newText = parseSpecs(doc)
+    cur.execute("UPDATE spec SET text='" + newText.replace("'","''").replace('"','""') + "' WHERE doc = '" + doc + "'")
+
+    
 if __name__ == '__main__':
     con = sqlite3.connect("SpecDB.db")
     cur = con.cursor()
