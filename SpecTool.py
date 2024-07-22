@@ -12,7 +12,7 @@ import openpyxl as opx
 import num2words as n2m
 import re
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog,ttk
 from PIL import Image, ImageTk
 
 from os import listdir
@@ -686,11 +686,87 @@ def getExcelFile(xlLabel):
     excelFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
     xlLabel.config(text= "The ref sheet location is: " + excelFilepath)
 
-
+def Search(tv, text, cur, var):
+    fields = ["","","",""]
+    match var.get():
+        case "Model":
+            fields[2] = text
+        case "Description":
+            fields[0] = text
+        case "Manufacturer":
+            fields[1] = text
+        case _:
+            print("How did you do that?????")
+    if fields[0] or fields[1] or fields[2] or fields[3]:
+        found = db.FindEntry(fields, cur)
+        tv.delete(*tv.get_children())
+        for item in found:
+            tv.insert("", tk.END, text = item[0], values = (item[1], item[2], item[0]+"_"+item[1]+"_"+item[2]+".docx"))
+    else:
+        tv.delete(*tv.get_children())
+        entries = cur.execute("SELECT * FROM item").fetchall()
+        for entry in entries:
+            tv.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"))
+    
+        print("Text entry is empty")
 #Temporary Placeholder Function
 def Nothing():
     pass
 
+def DBWindow():
+    for widget in root.winfo_children():
+        widget.destroy()
+    root.geometry("1000x600")
+    rightFrame = tk.Frame(root)
+    rightFrame.pack(side="right")
+    searchFrame= tk.Frame(rightFrame)
+    searchFrame.pack(side="top")
+    
+    DBview = tk.Frame(rightFrame)
+    DBview.pack(side = "bottom", padx = 20)
+    treeview = ttk.Treeview(DBview, selectmode = 'browse', columns=("Manufacturer", "Model", "Word Doc"))
+    treeview.heading("#0", text="Description")
+    treeview.heading("Manufacturer", text="Manufacturer")
+    treeview.heading("Model", text="Model")
+    treeview.heading("Word Doc", text="Word Doc")
+    con = sqlite3.connect("SpecDB.db")
+    cur = con.cursor()
+    entries = cur.execute("SELECT * FROM item").fetchall()
+    for entry in entries:
+        treeview.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"))
+    
+
+    scrollBar = ttk.Scrollbar(DBview, orient="vertical", command = treeview.yview)
+    scrollBar.pack(side='right', fill = 'y')
+    treeview.pack(side = 'right', fill = 'y')
+    treeview.configure(yscrollcommand = scrollBar.set)
+
+    buttonFrame = tk.Frame(root)
+    buttonFrame.pack(side="left")
+    
+    add = tk.Button(buttonFrame, text= "Add Entry", command=Nothing)
+    add.pack(side="top", pady=10, padx=30, expand=True)
+    modify = tk.Button(buttonFrame, text = "Modify Entry", command=Nothing)
+    modify.pack(side="top", pady=10, padx=30, expand=True)
+    delete = tk.Button(buttonFrame, text = "Delete Entry", command=Nothing)
+    delete.pack(side="top", pady=10, padx=30, expand=True)
+    update = tk.Button(buttonFrame, text = "Update Entries", command=Nothing)
+    update.pack(side="top", pady=10, padx=30, expand=True)
+
+    search = tk.Label(searchFrame, text= "Search for ")
+    search.pack(side="left")
+    T = tk.Text(searchFrame, height=1, width=15)
+    T.pack(side="left")
+    search2 = tk.Label(searchFrame, text=" in ")
+    search2.pack(side="left")
+    options = ["Description", "Manufacturer", "Model"]
+    var = tk.StringVar(root)
+    var.set("Model")
+    drop = tk.OptionMenu(searchFrame, var, *options)
+    drop.pack(side="left")
+    submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
+    submit.pack(side="left", padx = 20)
+    
 #Create window for choosing functionality
 def selectionWindow():
     for widget in root.winfo_children():
@@ -698,8 +774,8 @@ def selectionWindow():
 
     frame = tk.Frame(root)
     frame.pack()
-
-    findSpecButton = tk.Button(frame, text="Find Specs", command=fsWindow, height=2, width=15, bg= '#afafaf')
+    
+    findSpecButton = tk.Button(frame, text="Find Specs", command=DBWindow, height=2, width=15, bg= '#afafaf')
     findSpecButton.pack(padx=80,pady=150,side=tk.LEFT)
 
     writeSpecButton = tk.Button(frame, text="Write Specs", command=wsWindow, height=2, width=15, bg= '#afafaf')

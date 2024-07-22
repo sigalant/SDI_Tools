@@ -81,15 +81,15 @@ def FindEntry(fields, cur):
     #[desc, manu, model, doc]
     conditionals = []
     if fields[0]:
-        conditionals.append("desc='" + fields[0] + "'")
+        conditionals.append("desc LIKE '%" + fields[0] + "%'")
     if fields[1]:
-        conditionals.append("manu='" + fields[1] + "'")
+        conditionals.append("manu LIKE '%" + fields[1] + "%'")
     if fields[2]:
-        conditionals.append("model='" + fields[2] + "'")
+        conditionals.append("model LIKE '%" + fields[2] + "%'")
     if fields[3]:
-        conditionals.append("doc='" + fields[3] + "'")
+        conditionals.append("doc LIKE '%" + fields[3] + "%'")
     cond = " AND ".join(conditionals)
-    return cur.execute("SELECT desc, manu, model, doc FROM item WHERE " + cond).fetchall()
+    return cur.execute(("SELECT desc, manu, model, doc FROM item WHERE " + cond)).fetchall()
     
 
 #Re-read Specs '.docx' file and write contents to spec table
