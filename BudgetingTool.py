@@ -1,3 +1,4 @@
+#Imports
 import openpyxl as opx
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -5,12 +6,14 @@ from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
 
+
 inputFilepath = ""
 outputFilepath = ""
 
+#Default percent markup
 markup = 18
 
-
+#Tkinter GUI
 root = tk.Tk()
 
 root.title("SDI Budget Formatting Tool")
@@ -48,6 +51,8 @@ errorFrame.pack(side=tk.BOTTOM)
 errorMsg = tk.Label(errorFrame, text="")
 errorMsg.pack(pady = 50)
     
+
+#Take Autoquotes export, and format it
 def formatFile():
     
     if inputFilepath == "":
@@ -60,12 +65,12 @@ def formatFile():
 
     errorMsg.config(text="Spreadsheet Successfully Formatted")
 
-    #Open Excel File TODO:Generalize for multiple budgets from folder, or create a GUI with file selection
+    #Open Excel File 
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
 
     #Search for headers
-    filterList = [0,0,0,0,0,0,0] #To hold column# for [ItemNo, Qty, Category, Sell, Remarks, Specs, Model] 
+    filterList = [0,0,0,0,0,0,0,0] #To hold column index for [ItemNo, Qty, Category, Sell, Remarks, Specs, Model, Unit] 
 
     for cell in sheet[1]:
         if type(cell.value) is not str:
@@ -84,6 +89,10 @@ def formatFile():
             filterList[5] = cell.column
         if cell.value.lower() == "Model".lower():
             filterList[6] = cell.column
+
+        #Need to confirm this works the way I think...
+        if cell.value.lower() == "Unit".lower():
+            filterList[7] = cell.column
     
 
     #Check for missing columns
@@ -92,12 +101,13 @@ def formatFile():
     except Exception as e:
         errorMsg.config(text="Warning: One or more columns may be missing")
 
-    #Fill 2D Array (Maybe linkedlist/Hash) with information
+    #Fill 2D Array with information
 
-    data = []
+    data = [] #To  hold all project data for each item
 
     for row in sheet.rows:
-        rowData = []
+        #Collect data from each row (Skipping empty cells)
+        rowData = [] #To hold data for a single item
         if row[0].value == "ItemNo":
             continue
         for item in filterList:
@@ -106,6 +116,9 @@ def formatFile():
                 rowData.append(row[item-1].value)
             except Exception:
                 rowData.append("")
+        if rowData[7] != None and rowData[7].lower() != "ea".lower():
+            rowData[1] = 1
+
         if rowData[2] != None: 
             rowData[2] = rowData[2].upper()
             if rowData[2] == "SPARENO":
@@ -116,7 +129,7 @@ def formatFile():
         if "os&e" in str(rowData[6]).lower() or "vendor" in str(rowData[6]).lower():
             rowData[3] = 'NIC'
             #rowData[4] = 'NIC'
-
+        #Add data from row to 2D array of all project data
         data.append(rowData)
         
 
@@ -202,7 +215,8 @@ def formatFile():
     rowNum = 6
     
     errorShown = False
-
+    
+    #Copy previously collected data to a new XL sheet
     for i in range(len(data)):
         
         if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
