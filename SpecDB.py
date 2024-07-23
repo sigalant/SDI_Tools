@@ -2,13 +2,18 @@ import sqlite3
 import docx as d
 from os import listdir
 from os.path import isfile, join
-
+import os
 #desc manu model doc
-#doc text
+#doc text modifiedtime
 
 #Take Docx file and convert into String
 def parseSpecs(file):
-    doc = d.Document(file)
+    doc=None
+    try:
+        doc = d.Document(file.strip())
+    except:
+        print("File not found at: " + file)
+        return -1
     docText = ''
     fullText = []
     for para in doc.paragraphs:
@@ -35,7 +40,7 @@ def parseSpecs(file):
             docText = docText + ('\n')
         p_runs = []
     docText = docText + ('\n'.join(fullText))
-    print(docText)
+    #print(docText)
     return docText
 
 #Add new entry into DB
@@ -43,19 +48,21 @@ def addEntry(info, cur):
     
     #Ignore if entry already exists
     query = ("SELECT doc FROM item WHERE doc='" +str(info[3]) +"'")
-    print(query)
+    #print(query)
     res = cur.execute(query)
     if(res.fetchone()): 
         print("Entry for " + info[0] + ":" + info[2] + " already exists.")
     else:
+        print("Adding Entry for " + info[0])
         #Add Entry
         cur.execute("INSERT INTO item VALUES ('" + str(info[0]) + "','" + str(info[1]) + "','" + str(info[2]) + "','" + str(info[3])+ "')")
 
         specText = parseSpecs(info[3])
         specText = specText.replace("'", "''").replace('"','""')
         
-        query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\')")
+        query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\',\'"+str(os.path.getmtime(info[3]))+"\')")
         cur.execute(query2)
+        print(query2)
 
 #Add entries from folder
 def addEntries(folderPath, cur):
@@ -64,7 +71,7 @@ def addEntries(folderPath, cur):
         f = f.replace("'", "''").replace('"','""')
         splitFile = f.split('_')
         if isfile(join(folderPath, f)) and len(splitFile) == 3 and '$' not in splitFile[0]:
-            addEntry([splitFile[0], splitFile[1], splitFile[2].split('.docx')[0], join(folderPath, f)],cur)
+            addEntry([splitFile[0].strip(), splitFile[1].strip(), splitFile[2].split('.docx')[0].strip(), join(folderPath, f)],cur)
 
 #TODO: take entry and docx file, then change docx path and doc text in DB (or delete and recreate)
 def ModifyEntry(entry, changes):
@@ -93,9 +100,16 @@ def FindEntry(fields, cur):
     
 
 #Re-read Specs '.docx' file and write contents to spec table
-def UpdateSpecs(doc, cur):
-    newText = parseSpecs(doc)
-    cur.execute("UPDATE spec SET text='" + newText.replace("'","''").replace('"','""') + "' WHERE doc = '" + doc + "'")
+def UpdateSpecs(cur):
+    for item in cur.execute("SELECT * FROM spec").fetchall():
+        if str(item[2]) == str(os.path.getmtime(item[0])):
+            #print("No updates found.")
+            continue
+        newText = parseSpecs(item[0])
+        if newText == -1:
+            continue
+        print("Updating: " + item[0])
+        cur.execute("UPDATE spec SET text='" + newText.replace("'","''").replace('"','""') + "', modTime='" + str(os.path.getmtime(item[0])) + "' WHERE doc = '" + item[0] + "'")
 
     
 if __name__ == '__main__':

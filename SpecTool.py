@@ -15,6 +15,7 @@ import tkinter as tk
 from tkinter import filedialog,ttk
 from PIL import Image, ImageTk
 
+import os
 from os import listdir
 from os.path import isfile, join
 
@@ -32,6 +33,7 @@ root.geometry("800x500")
 ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
+
 
 def copySpecs(tempDocPath, p, highlight, cur):
     #COPY AND PASTE FROM ASSOCIATED DOC
@@ -112,6 +114,9 @@ def copySpecs(tempDocPath, p, highlight, cur):
         p.add_run('\n'.join(fullText))
     #break
     '''
+def ChooseSpec(chosenSpec, popup, tv):
+    #get the item in focus, parse the data into chosenSpec(String), delete popup window
+    
 def findSpecs(msgLabel):
     con = sqlite3.connect("SpecDB.db")
     cur = con.cursor()
@@ -603,17 +608,35 @@ def writeSpecs(msgLabel):
 
                 matches = []
                 if specData[1] == "Custom Fabrication":
-                    matches = cur.execute("SELECT doc FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()#db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+                    matches = cur.execute("SELECT * FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()#db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
                 else:
-                    matches = cur.execute("SELECT doc FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()#db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                    matches = cur.execute("SELECT * FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()#db.itemTable.search(Query()['Model_No.'].search(specData[2]))
                 #if "22CG" in specData[2]:
                     #print(matches)
                 if matches:
                     
-                    copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
-                    
+                    copySpecs(matches[0][3], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    #If there were multiple matches, offer user to choose the best match
                     if len(matches) > 1:
-                        pass#print(matches)
+                        print(matches)
+                        top=tk.Toplevel(root)
+                        top.geometry("800x400")
+                        top.title("Select a Source Spec")
+                        tk.Label(top,text="Multiple Specs Match the Following Item.\nDescription: "+ specData[0] +"\nManufacturer: "+ specData[1] +"\nModel No.: "+ specData[2] +"\n\n\nPlease Choose Best Match").pack()
+                        columns=["Manufacturer","Model","Word Doc"]
+                        treeview = ttk.Treeview(top, selectmode = 'browse', columns =columns)
+                        treeview.pack()
+                        select = tk.Button(top, text="Select", command=lambda:chooseSpec(matchedString, top))
+                        #for col in columns:
+                        #    treeview.heading(col, text=col,command=lambda: treeview_sort_column(treeview, col, True))
+                        treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
+                        treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
+                        treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
+                        treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
+                        treeview.tag_bind('tag?', "<Double-1>", openFile)
+                        for entry in matches:        
+                            t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",)) 
+                        root.wait_window(top)
                 else:
                     #Check partial matches
                     if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
@@ -686,6 +709,7 @@ def getExcelFile(xlLabel):
     excelFilepath = filedialog.askopenfilename(filetypes = (("Microsoft Excel Worksheet", "*.xlsx"),))
     xlLabel.config(text= "The ref sheet location is: " + excelFilepath)
 
+#Search DB for anything that partially matches user input
 def Search(tv, text, cur, var):
     fields = ["","","",""]
     match var.get():
@@ -708,7 +732,6 @@ def Search(tv, text, cur, var):
         for entry in entries:
             tv.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"))
     
-        print("Text entry is empty")
 #Temporary Placeholder Function
 def Nothing():
     pass
@@ -724,22 +747,26 @@ def DBWindow():
     
     DBview = tk.Frame(rightFrame)
     DBview.pack(side = "bottom", padx = 20)
-    treeview = ttk.Treeview(DBview, selectmode = 'browse', columns=("Manufacturer", "Model", "Word Doc"))
-    treeview.heading("#0", text="Description")
-    treeview.heading("Manufacturer", text="Manufacturer")
-    treeview.heading("Model", text="Model")
-    treeview.heading("Word Doc", text="Word Doc")
+    columns = ("Manufacturer", "Model", "Word Doc")
+    treeview = ttk.Treeview(DBview, selectmode = 'browse', columns =columns)
+    for col in columns:
+        treeview.heading(col, text=col,command=lambda: treeview_sort_column(treeview, col, True))
+    treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
+    treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
+    treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
+    treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
     con = sqlite3.connect("SpecDB.db")
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()
-    for entry in entries:
-        treeview.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"))
-    
+    treeview.tag_bind('tag?', "<Double-1>", openFile)
+    for entry in entries:        
+        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",))
 
     scrollBar = ttk.Scrollbar(DBview, orient="vertical", command = treeview.yview)
     scrollBar.pack(side='right', fill = 'y')
     treeview.pack(side = 'right', fill = 'y')
-    treeview.configure(yscrollcommand = scrollBar.set)
+    treeview.configure(yscrollcommand =scrollBar.set)
+    
 
     buttonFrame = tk.Frame(root)
     buttonFrame.pack(side="left")
@@ -748,14 +775,14 @@ def DBWindow():
     add.pack(side="top", pady=10, padx=30, expand=True)
     modify = tk.Button(buttonFrame, text = "Modify Entry", command=Nothing)
     modify.pack(side="top", pady=10, padx=30, expand=True)
-    delete = tk.Button(buttonFrame, text = "Delete Entry", command=Nothing)
+    delete = tk.Button(buttonFrame, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview))
     delete.pack(side="top", pady=10, padx=30, expand=True)
-    update = tk.Button(buttonFrame, text = "Update Entries", command=Nothing)
+    update = tk.Button(buttonFrame, text = "Update Entries", command=lambda:UpdateSpecs(con))
     update.pack(side="top", pady=10, padx=30, expand=True)
 
     search = tk.Label(searchFrame, text= "Search for ")
     search.pack(side="left")
-    T = tk.Text(searchFrame, height=1, width=15)
+    T = tk.Text(searchFrame, height=1.2, width=15)
     T.pack(side="left")
     search2 = tk.Label(searchFrame, text=" in ")
     search2.pack(side="left")
@@ -766,6 +793,44 @@ def DBWindow():
     drop.pack(side="left")
     submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
     submit.pack(side="left", padx = 20)
+
+def DeleteEntry(con, tv):
+    cur = con.cursor()
+    try:
+        item = tv.selection()[0]
+    except:
+        print("Well Fuck")
+        return
+    itemInfo = tv.item(item)
+    tv.delete(item)
+    
+    print(item)
+    db.DeleteEntry('V:\\Specs\\Specs Script\\Template Specs_Word Files\\'+itemInfo['values'][2], cur)
+    con.commit()
+    print("Deleted: " + str(itemInfo['values']))
+    
+
+def UpdateSpecs(con):
+    cur = con.cursor()
+    db.UpdateSpecs(cur)
+    con.commit()
+    
+
+def openFile(event):
+    tree=event.widget
+    item = tree.item(tree.focus())
+    os.startfile('V:\\Specs\\Specs Script\\Template Specs_Word Files\\'+item['values'][2])
+
+def treeview_sort_column(tv, col, reverse):
+    l=[]
+    if col == '#0':
+        l = [(tv.item(k)["text"],k) for k in tv.get_children('')]
+    else:
+        l = [(tv.set(k,col),k) for k in tv.get_children('')]
+    l.sort(key = lambda t: t[0],reverse=reverse)
+    for index, (val, k) in enumerate(l):
+        tv.move(k,'',index)
+    tv.heading(col, command=lambda: treeview_sort_column(tv,col, not reverse))
     
 #Create window for choosing functionality
 def selectionWindow():
