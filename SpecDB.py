@@ -62,7 +62,7 @@ def addEntry(info, cur):
         
         query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\',\'"+str(os.path.getmtime(info[3]))+"\')")
         cur.execute(query2)
-        print(query2)
+        #print(query2)
 
 #Add entries from folder
 def addEntries(folderPath, cur):
@@ -74,8 +74,10 @@ def addEntries(folderPath, cur):
             addEntry([splitFile[0].strip(), splitFile[1].strip(), splitFile[2].split('.docx')[0].strip(), join(folderPath, f)],cur)
 
 #TODO: take entry and docx file, then change docx path and doc text in DB (or delete and recreate)
-def ModifyEntry(entry, changes):
-    pass
+def ModifyEntry(entry, changes, cur):
+
+    cur.execute("UPDATE item SET desc='', manu='', model='', doc='' WHERE doc=''")
+    cur.execute("UPDATE spec SET doc='', text='', modTime='' WHERE doc=''")
 
 #Take entry and remove from DB
 #change to test all fields?
