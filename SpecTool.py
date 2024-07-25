@@ -35,9 +35,8 @@ root.wm_iconphoto(False, photo)
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
     temp = d.Document(tempDocPath)
-    fullText = []
     i = 0
-
+    print(tempDocPath)
     specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
 
     #Begin copying after header
@@ -49,8 +48,8 @@ def copySpecs(tempDocPath, p, highlight, cur):
         specText = ["\n".join(specText[i+1:])]
     else:
         specText = ("\n".join(specText[i+1:])).split('~')
-    j=0
 
+    j=0
     #Copy all text, if font is colored, use that font color
     while j < len(specText):
         #Uncolored Section
@@ -80,7 +79,7 @@ def ChooseSpec(chosenSpec, popup, tv):
         print("Make a Selection")
         return
     else:
-        chosenSpec.set("V:\\Specs\\Specs Script\\Template Specs_Word Files\\"+item['values'][2])
+        chosenSpec.set("V:/Specs/Specs Script/Template Specs_Word Files/"+item['values'][2])
         popup.destroy()
         
 
@@ -88,7 +87,6 @@ def ChooseSpec(chosenSpec, popup, tv):
 def findSpecs(msgLabel):
     con = sqlite3.connect("SpecDB.db")
     cur = con.cursor()
-    #msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.") #Not actually that useful
 
     #Make sure input/output paths exist
     try:
@@ -111,6 +109,7 @@ def findSpecs(msgLabel):
     
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
+
         
         #Find header locations
         if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':  
@@ -173,6 +172,7 @@ def findSpecs(msgLabel):
                 if len(matches) > 1:
                     #TODO: Copy choice popup here
                     pass
+                
             #Else look for partial matches
             else:
                 #Check for partially matching model and manufacturer
@@ -290,7 +290,7 @@ def writeSpecs(msgLabel):
             p = doc.add_paragraph('', style = 'Spec_Header')
             p.alignment = 1
             p.add_run(row[0].value + "\n").bold = True
-        
+#HEADERS        
         #Create spec header with info from Revit output
         else:
             p = doc.add_paragraph('', style = 'Spec_Header')
@@ -492,7 +492,7 @@ def writeSpecs(msgLabel):
             ambiguousModels = ["custom", "custom design"] #Model No. that aren't specific to a model
 
             #Make/find specs for item
-            
+#SPECS BODY            
             #Existing Items Specs
             if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
                             
@@ -589,7 +589,7 @@ def writeSpecs(msgLabel):
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                       and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
                     
-                    copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    copySpecs("V:/Specs/Specs Script/Template Specs_Word Files/" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                     
                 # If Manufacturer and Desc. match, copy and highlight specs
                 elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
@@ -612,10 +612,10 @@ def writeSpecs(msgLabel):
                             #COPY AND PASTE FROM ASSOCIATED DOC
                             if(specRefs[3][index] == ""):
                                 continue
-                            copySpecs("V:\\Specs\\Specs Script\\Template Specs_Word Files\\" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight,cur)
+                            copySpecs("V:/Specs/Specs Script/Template Specs_Word Files/" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight,cur)
                             break                           
     try:
-        doc.save(outputFilepath+"\\Specs.docx")
+        doc.save(outputFilepath+"/Specs.docx")
     except:
         msgLabel.config(text="Error: Cannot save Specs.docx while file is open")
         return
@@ -663,8 +663,100 @@ def Search(tv, text, cur, var):
         entries = cur.execute("SELECT * FROM item").fetchall()
         for entry in entries:
             tv.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"),tags=("tag?",))
-def ModifyEntry(con, tv):
-    pass
+
+def ModifyEntry(con, tv, root):
+    cur = con.cursor()
+    item = None
+    try:
+        item = tv.selection()[0]
+    except:
+        print("No item selected")
+        return
+    
+    itemInfo = tv.item(item)
+    #print(itemInfo)
+    #popup with info for changes
+    top=tk.Toplevel(root)
+    top.geometry("500x350")
+    top.title("Edit Spec")
+
+    docPath=tk.StringVar(root,"")
+
+    cornerBuffer = tk.Label(top)
+    cornerBuffer.grid(row=0, column=0, padx=35, pady=10)
+    centerBuffer = tk.Label(top)
+    centerBuffer.grid(row=3, column=2, padx=40, pady=10)
+    
+    descText = tk.Text(top, height=1, width=15)
+    descText.insert(tk.INSERT, itemInfo['text'])
+    descText.grid(row=2,column=1)
+    manuText = tk.Text(top, height=1, width=15)
+    manuText.insert(tk.INSERT, itemInfo['values'][0])
+    manuText.grid(row=2,column=3)
+    modelText = tk.Text(top, height=1, width=15)
+    modelText.grid(row=5,column=1)
+    modelText.insert(tk.INSERT, itemInfo['values'][1])
+
+    descLabel = tk.Label(top, text="Enter Description:")
+    descLabel.grid(row=1, column=1)
+    manuLabel = tk.Label(top, text="Enter Manufacturer:")
+    manuLabel.grid(row=1, column=3)
+    modelLabel = tk.Label(top, text="Enter Model:")
+    modelLabel.grid(row=4, column=1)
+    docLabel = tk.Label(top, text="Choose Doc File:")
+    docLabel.grid(row=4, column=3)
+    docPathLabel = tk.Label(top, text="Spec Doc is located at: " + docPath.get(), wraplength=200)
+    docPathLabel.grid(row=6, column=1, columnspan=3, pady=10)
+
+    def chooseDoc():
+        docPath.set(filedialog.askopenfilename(filetypes = (("Microsoft Word Document", "*.docx"),)))
+        top.lift()
+        docPathLabel.configure(text="Spec Doc is located at: " + docPath.get())
+
+    docButton = tk.Button(top, text="Select Doc", command=chooseDoc)
+    docButton.grid(row=5,column=3)
+    ch = tk.StringVar(root, "")
+    def submit():
+        changes = [descText.get('1.0', 'end-1c'), manuText.get('1.0', 'end-1c'), modelText.get('1.0', 'end-1c'), docPath.get()]
+        ch.set(",".join(changes))
+        db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], "V:/Specs/Specs Script/Template Specs_Word Files/"+itemInfo["values"][2]], changes, cur)    
+        top.destroy()
+
+    submitButton = tk.Button(top, text="Submit", command=submit)
+    submitButton.grid(row=7,column=2, pady = 20)
+
+    root.wait_window(top)
+    changes = ch.get().split(",")
+    if len(changes) < 4:
+        print("NO GO BRO")
+        return
+    con.commit()
+    print(ch.get())
+#Edit Treeview
+    vals = ['','','']
+    
+    if changes[0]:
+        desc = changes[0]
+    else:
+        desc = itemInfo['text']
+        
+    if changes[1]:
+        vals[0] = changes[1]
+    else:
+        vals[0] = itemInfo['values'][0]
+
+    if changes[2]:
+        vals[1] = changes[2]
+    else:
+        vals[1] = itemInfo['values'][1]
+
+    if changes[3]:
+        vals[2] = changes[3]
+    else:
+        vals[2] = itemInfo['values'][2]
+    print(vals[2] +":"+itemInfo['values'][2] + ":" + changes[3]) 
+    tv.item(item, text=desc, values=vals)
+    
 def AddEntry(con, tv):
     cur = con.cursor()
     for f in filedialog.askopenfilenames():
@@ -684,63 +776,7 @@ def AddEntry(con, tv):
 def Nothing():
     pass
 
-#Window for displaying and interacting with DB
-def DBWindow():
-    for widget in root.winfo_children():
-        widget.destroy()
-        
-    root.geometry("1100x500")
-    
-    backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
-    backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
-    
-    columns = ("Manufacturer", "Model", "Word Doc")
-    treeview = ttk.Treeview(root, selectmode = 'browse', columns =columns)
-    for col in columns:
-        treeview.heading(col, text=col,command=lambda: treeview_sort_column(treeview, col, True))
-    treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
-    treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
-    treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
-    treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
-    treeview.tag_bind('tag?', "<Double-1>", openFile)
 
-    con = sqlite3.connect("SpecDB.db")
-    cur = con.cursor()
-    entries = cur.execute("SELECT * FROM item").fetchall()
-
-    for entry in entries:        
-        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",))
-
-    scrollBar = ttk.Scrollbar(root, orient="vertical", command = treeview.yview)
-    scrollBar.grid(row=2,column=6,rowspan=4, sticky='ns')
-    treeview.grid(row=2,column=2, rowspan=4, columnspan=4)
-    treeview.configure(yscrollcommand =scrollBar.set)
-    
-
-    add = tk.Button(root, text= "Add Entry", command=lambda:AddEntry(con,treeview))
-    add.grid(row=2, column=1, padx = 20)
-    modify = tk.Button(root, text = "Modify Entry", command=Nothing)
-    modify.grid(row=3, column=1, padx = 20)
-    delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview))
-    delete.grid(row=4, column=1, padx = 20)
-    update = tk.Button(root, text = "Update Entries", command=lambda:UpdateSpecs(con))
-    update.grid(row=5, column=1, padx = 20)
-
-    searchFrame = tk.Frame(root)
-    searchFrame.grid(row=1, column=2, columnspan=4, pady=20)
-    search = tk.Label(searchFrame, text= "Search for ")
-    search.grid(row=0, column=0)
-    T = tk.Text(searchFrame, height=1.2, width=15)
-    T.grid(row=0, column=1)
-    search2 = tk.Label(searchFrame, text=" in ")
-    search2.grid(row=0, column=2)
-    options = ["Description", "Manufacturer", "Model"]
-    var = tk.StringVar(root)
-    var.set("Model")
-    drop = tk.OptionMenu(searchFrame, var, *options)
-    drop.grid(row=0, column=3)
-    submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
-    submit.grid(row=0, column=4, columnspan=2, padx = 20, pady=20)
 
 #Remove entry from treeview and DB
 def DeleteEntry(con, tv):
@@ -748,7 +784,7 @@ def DeleteEntry(con, tv):
     try:
         item = tv.selection()[0]
     except:
-        print("Well Fuck")
+        print("No item selected")
         return
     itemInfo = tv.item(item)
     tv.delete(item)
@@ -796,6 +832,62 @@ def selectionWindow():
 
     writeSpecButton = tk.Button(frame, text="Write Specs", command=wsWindow, height=2, width=15, bg= '#afafaf')
     writeSpecButton.pack(padx=80,pady=100,side=tk.RIGHT)
+
+#Window for displaying and interacting with DB
+def DBWindow():
+    for widget in root.winfo_children():
+        widget.destroy()
+        
+    root.geometry("1100x500")
+    
+    backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
+    backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
+    
+    columns = ("Manufacturer", "Model", "Word Doc")
+    treeview = ttk.Treeview(root, selectmode = 'browse', columns =columns)
+    treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
+    treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
+    treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
+    treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
+    treeview.tag_bind('tag?', "<Double-1>", openFile)
+
+    con = sqlite3.connect("SpecDB.db")
+    cur = con.cursor()
+    entries = cur.execute("SELECT * FROM item").fetchall()
+
+    for entry in entries:        
+        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",))
+
+    scrollBar = ttk.Scrollbar(root, orient="vertical", command = treeview.yview)
+    scrollBar.grid(row=2,column=6,rowspan=4, sticky='ns')
+    treeview.grid(row=2,column=2, rowspan=4, columnspan=4)
+    treeview.configure(yscrollcommand =scrollBar.set)
+    
+
+    add = tk.Button(root, text= "Add Entry", command=lambda:AddEntry(con,treeview))
+    add.grid(row=2, column=1, padx = 20)
+    modify = tk.Button(root, text = "Modify Entry", command=lambda:ModifyEntry(con, treeview, root))
+    modify.grid(row=3, column=1, padx = 20)
+    delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview))
+    delete.grid(row=4, column=1, padx = 20)
+    update = tk.Button(root, text = "Update Entries", command=lambda:UpdateSpecs(con))
+    update.grid(row=5, column=1, padx = 20)
+
+    searchFrame = tk.Frame(root)
+    searchFrame.grid(row=1, column=2, columnspan=4, pady=20)
+    search = tk.Label(searchFrame, text= "Search for ")
+    search.grid(row=0, column=0)
+    T = tk.Text(searchFrame, height=1.2, width=15)
+    T.grid(row=0, column=1)
+    search2 = tk.Label(searchFrame, text=" in ")
+    search2.grid(row=0, column=2)
+    options = ["Description", "Manufacturer", "Model"]
+    var = tk.StringVar(root)
+    var.set("Model")
+    drop = tk.OptionMenu(searchFrame, var, *options)
+    drop.grid(row=0, column=3)
+    submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
+    submit.grid(row=0, column=4, columnspan=2, padx = 20, pady=20)
 
 #Create Window for Writing Specs Function
 def wsWindow():

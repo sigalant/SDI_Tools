@@ -73,11 +73,27 @@ def addEntries(folderPath, cur):
         if isfile(join(folderPath, f)) and len(splitFile) == 3 and '$' not in splitFile[0]:
             addEntry([splitFile[0].strip(), splitFile[1].strip(), splitFile[2].split('.docx')[0].strip(), join(folderPath, f)],cur)
 
-#TODO: take entry and docx file, then change docx path and doc text in DB (or delete and recreate)
+#Take an entry and a list of changes to make in the DB
 def ModifyEntry(entry, changes, cur):
-
-    cur.execute("UPDATE item SET desc='', manu='', model='', doc='' WHERE doc=''")
-    cur.execute("UPDATE spec SET doc='', text='', modTime='' WHERE doc=''")
+    
+    changeList = []
+    
+    if changes[0]:
+        changeList.append("desc='"+changes[0]+"'")
+    if changes[1]:
+        changeList.append("manu='"+changes[1]+"'")
+    if changes[2]:
+        changeList.append("model='"+changes[2]+"'")
+    if changes[3]:
+        changeList.append("doc='"+changes[3]+"'")
+        cur.execute("UPDATE spec SET doc='"+str(changes[3])+"', text='"+str(parseSpecs(changes[3]).replace("'","''").replace('"','""'))
+                    +"', modTime='"+str(os.path.getmtime(changes[3]))+"' WHERE doc='"+entry[3]+"'")
+    if not changeList:
+        print("Nothing was entered...?")
+        return
+    query = "UPDATE item SET " + ", ".join(changeList) + " WHERE desc='"+str(entry[0])+"'AND manu='"+str(entry[1])+"'AND model='"+str(entry[2])+"'AND doc='"+entry[3]+"'"
+    print(query)
+    cur.execute(query)
 
 #Take entry and remove from DB
 #change to test all fields?
