@@ -866,26 +866,35 @@ def DBWindow():
 
     add = tk.Button(root, text= "Add Entry", command=lambda:AddEntry(con,treeview))
     add.grid(row=2, column=1, padx = 20)
+
     modify = tk.Button(root, text = "Modify Entry", command=lambda:ModifyEntry(con, treeview, root))
     modify.grid(row=3, column=1, padx = 20)
+
     delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview))
     delete.grid(row=4, column=1, padx = 20)
+
     update = tk.Button(root, text = "Update Entries", command=lambda:UpdateSpecs(con))
     update.grid(row=5, column=1, padx = 20)
 
     searchFrame = tk.Frame(root)
     searchFrame.grid(row=1, column=2, columnspan=4, pady=20)
+
     search = tk.Label(searchFrame, text= "Search for ")
     search.grid(row=0, column=0)
+
     T = tk.Text(searchFrame, height=1.2, width=15)
     T.grid(row=0, column=1)
+
     search2 = tk.Label(searchFrame, text=" in ")
     search2.grid(row=0, column=2)
+
     options = ["Description", "Manufacturer", "Model"]
     var = tk.StringVar(root)
     var.set("Model")
+
     drop = tk.OptionMenu(searchFrame, var, *options)
     drop.grid(row=0, column=3)
+
     submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
     submit.grid(row=0, column=4, columnspan=2, padx = 20, pady=20)
 
