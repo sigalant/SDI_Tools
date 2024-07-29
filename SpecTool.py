@@ -854,7 +854,7 @@ def DBWindow():
     entries = cur.execute("SELECT * FROM item").fetchall()
 
     for entry in entries:        
-        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",))
+        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[3].split("/")[len(entry[3].split("/"))-1]), tags=("tag?",))
 
     scrollBar = ttk.Scrollbar(root, orient="vertical", command = treeview.yview)
     scrollBar.grid(row=2,column=6,rowspan=4, sticky='ns')
