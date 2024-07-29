@@ -85,7 +85,7 @@ def ChooseSpec(chosenSpec, popup, tv):
 
 #Find matching Specs for each item, and enter into .xlsx file highlighting partial matches and non-matches
 def findSpecs(msgLabel):
-    con = sqlite3.connect("SpecDB.db")
+    con = sqlite3.connect("specsDB.db")
     cur = con.cursor()
 
     #Make sure input/output paths exist
@@ -165,7 +165,7 @@ def findSpecs(msgLabel):
 
             #If there was a match, add a link to the xlsx file
             if matches:
-                newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('\\')[len(matches[0][0].split('\\'))-1].split('.docx')[0] +"\")"
+                newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('/')[len(matches[0][0].split('/'))-1].split('.docx')[0] +"\")"
                 for i in range(0,4):
                     newSheet[rowIndex][i].fill = noFill
                 
@@ -183,7 +183,7 @@ def findSpecs(msgLabel):
                     matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
                 #If there was a match, add a link and highlight yellow
                 if matches:
-                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('\\')[len(matches[0][0].split('\\'))-1].split('.docx')[0] +"\")"
+                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('/')[len(matches[0][0].split('/'))-1].split('.docx')[0] +"\")"
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = yellowFill
                 #Otherwise highlight red
@@ -528,7 +528,7 @@ def writeSpecs(msgLabel):
                 
             #If excel sheet is not provided, search through DB for a match
             elif excelFilepath == "":
-                con = sqlite3.connect("specDB.db")
+                con = sqlite3.connect("specsDB.db")
                 cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
@@ -583,7 +583,7 @@ def writeSpecs(msgLabel):
                         copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
                 
             else:
-                con = sqlite3.connect("specDB.db")
+                con = sqlite3.connect("specsDB.db")
                 cur = con.cursor()
                 #if specs exist, copy and paste    
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
@@ -776,8 +776,6 @@ def AddEntry(con, tv):
 def Nothing():
     pass
 
-
-
 #Remove entry from treeview and DB
 def DeleteEntry(con, tv):
     cur = con.cursor()
@@ -827,7 +825,7 @@ def selectionWindow():
     frame = tk.Frame(root)
     frame.pack()
     
-    findSpecButton = tk.Button(frame, text="Find Specs", command=DBWindow, height=2, width=15, bg= '#afafaf')
+    findSpecButton = tk.Button(frame, text="Manage DB", command=DBWindow, height=2, width=15, bg= '#afafaf')
     findSpecButton.pack(padx=80,pady=150,side=tk.LEFT)
 
     writeSpecButton = tk.Button(frame, text="Write Specs", command=wsWindow, height=2, width=15, bg= '#afafaf')
@@ -851,7 +849,7 @@ def DBWindow():
     treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
     treeview.tag_bind('tag?', "<Double-1>", openFile)
 
-    con = sqlite3.connect("SpecDB.db")
+    con = sqlite3.connect("specsDB.db")
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()
 
@@ -907,34 +905,37 @@ def wsWindow():
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
 
     padLabel = tk.Label(root, text="")
-    padLabel.grid(row=1,column=1, padx=80, pady=30)
+    padLabel.grid(row=9,column=1, padx=80, pady=30)
 
     messageLabel = tk.Label(root, text="")
-    messageLabel.grid(row=7, column = 2, columnspan = 3)
+    messageLabel.grid(row=8, column = 2, columnspan = 3)
 
     infoLabel = tk.Label(root, text="Write Specs Document")
-    infoLabel.grid(row=1, column=3, sticky= 'N')
+    infoLabel.grid(row=1, column=3, sticky= 'N', pady=30)
 
     inputLabel = tk.Label(root, wraplength = 250, text="The input file is: " + inputFilepath)
-    inputLabel.grid(row=3, column=2, columnspan =3)
+    inputLabel.grid(row=4, column=2, columnspan =3)
 
     inputButton = tk.Button(root, text="Select Input File", command=lambda:getFilepath(inputLabel))
-    inputButton.grid(row=2, column=2, padx=10, pady=30)
+    inputButton.grid(row=2, column=2, padx=10, pady=30, rowspan=2)
 
     outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
-    outputLabel.grid(row=4, column=2, columnspan =3)
+    outputLabel.grid(row=5, column=2, columnspan =3)
 
     outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
-    outputButton.grid(row=2, column=4, padx=10, pady=10)
+    outputButton.grid(row=2, column=4, padx=10, pady=10, rowspan=2)
 
     xlLabel = tk.Label(root, wraplength = 250, text="The ref sheet location is: " + excelFilepath)
-    xlLabel.grid(row=5, column=2, columnspan =3)
+    xlLabel.grid(row=6, column=2, columnspan =3)
     
     xlButton = tk.Button(root, text="Select Ref Sheet\n(Optional)", command=lambda:getExcelFile(xlLabel))
-    xlButton.grid(row=2, column=3, padx=10, pady=10)
+    xlButton.grid(row=3, column=3, padx=10, pady=10)
 
+    refButton = tk.Button(root, text="Make Ref Sheet\n(Optional)", command=lambda:findSpecs(messageLabel))
+    refButton.grid(row=2, column=3, padx=10, pady=10)
+    
     submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel))
-    submitButton.grid(row=6, column = 3, pady = 20)
+    submitButton.grid(row=7, column = 3, pady = 20)
 
 #Create Window for Finding Specs Function
 def fsWindow():

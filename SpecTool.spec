@@ -3,7 +3,7 @@
 
 a = Analysis(
     ['SpecTool.py'],
-    pathex=[],
+    pathex=['C:\\Users\\Antonio\\Documents\\GitHub\\SDI_Tools'],
     binaries=[],
     datas=[],
     hiddenimports=[],
