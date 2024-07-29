@@ -205,6 +205,8 @@ def findSpecs(msgLabel):
 def writeSpecs(msgLabel):
 
     global excelFilepath
+
+    specDict = {}
     
     #Create doc and style
     doc = d.Document()
@@ -262,7 +264,7 @@ def writeSpecs(msgLabel):
     #Otherwise collect all the file names (No longer useful w/ DB?)
     else:
         onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]
-
+    
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
         #Find header locations
@@ -547,28 +549,36 @@ def writeSpecs(msgLabel):
                 if matches:
                     specDoc = ""
                     #If there were multiple matches, offer user to choose the best match
+                    
                     if len(matches) > 1:
                         print(matches)
-                        top=tk.Toplevel(root)
-                        top.geometry("800x400")
-                        top.title("Select a Source Spec")
-                        tk.Label(top,text="Multiple Specs Match the Following Item.\nDescription: "+ str(specData[0]) +"\nManufacturer: "+ str(specData[1]) +"\nModel No.: "+ str(specData[2]) +"\n\n\nPlease Choose Best Match").pack()
-                        columns=["Manufacturer","Model","Word Doc"]
-                        treeview = ttk.Treeview(top, selectmode = 'browse', columns =columns)
-                        treeview.pack()
-                        matchedString = tk.StringVar(root, "")
-                        select = tk.Button(top, text="Select", command=lambda:ChooseSpec(matchedString, top, treeview))
-                        select.pack()
-                        
-                        treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
-                        treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
-                        treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
-                        treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
-                        treeview.tag_bind('tag?', "<Double-1>", openFile)
-                        for entry in matches:        
-                            t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",)) 
-                        root.wait_window(top)
-                        specDoc = matchedString.get()
+                        try:
+                            #Try using dictionary to make decision
+                            specDoc = specDict[str(specData[2])]
+                            print(specDict)
+                        except:
+                            #Have user make a decision and save it to dictionary
+                            top=tk.Toplevel(root)
+                            top.geometry("800x400")
+                            top.title("Select a Source Spec")
+                            tk.Label(top,text="Multiple Specs Match the Following Item.\nDescription: "+ str(specData[0]) +"\nManufacturer: "+ str(specData[1]) +"\nModel No.: "+ str(specData[2]) +"\n\n\nPlease Choose Best Match").pack()
+                            columns=["Manufacturer","Model","Word Doc"]
+                            treeview = ttk.Treeview(top, selectmode = 'browse', columns =columns)
+                            treeview.pack()
+                            matchedString = tk.StringVar(root, "")
+                            select = tk.Button(top, text="Select", command=lambda:ChooseSpec(matchedString, top, treeview))
+                            select.pack()
+                            
+                            treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
+                            treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
+                            treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
+                            treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
+                            treeview.tag_bind('tag?', "<Double-1>", openFile)
+                            for entry in matches:        
+                                t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",)) 
+                            root.wait_window(top)
+                            specDoc = matchedString.get()
+                            specDict[str(specData[2])] = specDoc
                     else:
                         specDoc = matches[0][3]
                     print(specDoc)
