@@ -84,11 +84,15 @@ def formatFile():
             sheetData[row][indexDict['PH']] = sheetData[row][indexDict['PH']].split('PH')[0]
         if sheetData[row][indexDict['VOLTS']] != None and sheetData[row][indexDict['VOLTS']] != '':
             sheetData[row][indexDict['VOLTS']] = sheetData[row][indexDict['VOLTS']].split('V')[0]
-        sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+1)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000)"
+            sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+1)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000)"
         #sheetData[row][indexDict['KW']].number_format="0.00"
         print(sheetData[row])
         sheetNew.append(sheetData[row])
         sheetNew[row][indexDict['KW']].number_format="0.00"
+    sheetNew.append([""])
+    sheetNew.append(["Total"])
+    sheetNew[sheetNew.max_row][indexDict['KW']].value = "=SUM("+chr(indexDict['KW']+65)+str(7)+":"+chr(indexDict['KW']+65)+str(sheetNew.max_row-1)+")"
+    sheetNew[sheetNew.max_row][indexDict['KW']].number_format="0"
     wbNew.save(newFile)
 
 #directly copy and paste(formatted)
