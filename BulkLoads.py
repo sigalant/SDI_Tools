@@ -34,6 +34,63 @@ def formatFile():
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
 
+    temp = inputFilepath.split('/')
+    filename = temp[(len(temp)-1)].split('.')[0] + "_formatted.xlsx"
+    newFile = outputFilepath+"/"+filename
+    wbNew=opx.Workbook()
+    sheetNew=wbNew.active
+
+    indexDict = {}
+    sheetData = []
+
+    #Copy all data to a 2D-List, and save indexes of important values
+    for row in sheet.rows:
+        rowData = []
+        for col in range(sheet.max_column):
+            cellData = row[col].value
+            #Get indexes from the first row
+            match cellData:
+                case 'AMPS':
+                    indexDict['AMPS'] = col
+                case 'KW':
+                    indexDict['KW'] = col
+                case 'GPH':
+                    indexDict['GPH'] = col
+                case 'BTUS':
+                    indexDict['BTUS'] = col
+                case 'EXH CFM':
+                    indexDict['EXH CFM'] = col
+                case 'SUPPLY CFM':
+                    indexDict['SUPPLY CFM'] = col
+                case 'VOLTS':
+                    indexDict['VOLTS'] = col
+                case 'PH':
+                    indexDict['PH'] = col
+                case _:
+                    pass
+            rowData.append(cellData)
+        sheetData.append(rowData)
+    #Format Sheet
+    
+    #Add data to sheet
+    sheetNew.append(sheetData[0])
+    for row in range(1,len(sheetData)):
+        if row==0:
+            row=1
+            print("Printed a row ig")
+        if sheetData[row][indexDict['AMPS']] != None and sheetData[row][indexDict['AMPS']] != '':
+            sheetData[row][indexDict['AMPS']] = sheetData[row][indexDict['AMPS']].split('A')[0]
+        if sheetData[row][indexDict['PH']] != None and sheetData[row][indexDict['PH']] != '':
+            sheetData[row][indexDict['PH']] = sheetData[row][indexDict['PH']].split('PH')[0]
+        if sheetData[row][indexDict['VOLTS']] != None and sheetData[row][indexDict['VOLTS']] != '':
+            sheetData[row][indexDict['VOLTS']] = sheetData[row][indexDict['VOLTS']].split('V')[0]
+        sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+1)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+1)+"*"+chr((indexDict['KW']-1)+65)+str(row+1)+")/1000)"
+        #sheetData[row][indexDict['KW']].number_format="0.00"
+        print(sheetData[row])
+        sheetNew.append(sheetData[row])
+        sheetNew[row][indexDict['KW']].number_format="0.00"
+    wbNew.save(newFile)
+
 #directly copy and paste(formatted)
 #Save indexes of amp, kw, gph, btu, cfm(exh & supply), and volts (for formatting, processing, or validating)
 
