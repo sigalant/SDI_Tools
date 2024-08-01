@@ -70,7 +70,7 @@ def formatFile():
     sheet = wb.active
 
     #Search for headers
-    filterList = [0,0,0,0,0,0,0,0,0] #To hold column index for [ItemNo, Qty, Category, Sell, Remarks, Specs, Model, Unit, SellTotal] 
+    filterList = [0,0,0,0,0,0,0,0,0] #To hold column index for [ItemNo, Qty, Category, Sell, Remarks, Spec, Model, Unit, SellTotal] 
 
     for cell in sheet[1]:
         if type(cell.value) is not str:
@@ -136,7 +136,7 @@ def formatFile():
 
         #Check if item not in contract
         if type(rowData[4]) == str:
-            if "os&e" in str(rowData[4]).lower() or "vendor" in str(rowData[4]).lower() or 'contractor' in str(rowData[4]).lower() or 'millwork' in str(rowData[4]).lower():
+            if "os&e" in str(rowData[4]).lower() or "by vendor" in str(rowData[4]).lower() or 'contractor' in str(rowData[4]).lower() or 'millwork' in str(rowData[4]).lower():
                 rowData[3] = 'NIC'
             elif "os&e" in str(rowData[6]).lower():
                 rowData[3] = 'NIC'
