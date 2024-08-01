@@ -54,90 +54,81 @@ def formatFile():
                 
             #Get indexes from the first row
             match cellData:
-                case str(x) if 'AMPS' in x:
+                case str(x) if 'AMPS' in x and 'AMPS' not in indexDict:
                     indexDict['AMPS'] = col
-                case str(x) if 'KW' in x:
+                case str(x) if 'KW' in x and 'KW' not in indexDict:
                     indexDict['KW'] = col
-                case str(x) if 'GPH' in x or 'LPH' in x:
+                case str(x) if 'GPH' in x or 'LPH' in x and 'GPH' not in indexDict:
                     indexDict['GPH'] = col
-                case str(x) if 'BTUS' in x:
+                case str(x) if 'BTUS' in x and 'BTUS' not in indexDict:
                     indexDict['BTUS'] = col
-                case str(x) if 'EXH CFM' in x:
+                case str(x) if 'EXH CFM' in x and 'EXH CFM' not in indexDict:
                     indexDict['EXH CFM'] = col
-                case str(x) if 'SUPPLY CFM' in x:
+                case str(x) if 'SUPPLY CFM' in x and 'SUPPLY CFM' not in indexDict:
                     indexDict['SUPPLY CFM'] = col
-                case str(x) if 'VOLTS' in x:
+                case str(x) if 'VOLTS' in x and 'VOLTS' not in indexDict:
                     indexDict['VOLTS'] = col
-                case str(x) if 'PH' in x:
+                case str(x) if 'PH' in x and 'PH' not in indexDict:
                     indexDict['PH'] = col
-                case str(x) if 'HEAT REJECTION' in x:
+                case str(x) if 'HEAT REJECTION' in x and 'HEAT REJECTION' not in indexDict:
                     indexDict['HEAT REJECTION'] = col
                 case _:
                     pass
-            # Adjust for 'newlines' in cell
-            if "_x000D_" in str(cellData):
-                if col == indexDict['AMPS'] and '(' not in str(cellData):
-                    cellData = cellData.split("_x000D_")
-                    cellData = str(float(cellData[0].split('A')[0]) + float(cellData[1].split('A')[0]))
-                else:
-                    double = True
-                    cellData = cellData.split("_x000D_")[0]
-            #Adjust for utility quantity x: (x)...A
-            if ')' in str(cellData) and col == indexDict['AMPS']:
-                cellData = str(float(cellData.split('(')[1].split(')')[0]) * float(cellData.split(')')[1].split('A')[0]))
+
+            #Remove commas for better number processing
             if type(cellData) == str:
                 cellData = cellData.replace(',','')
-            if double and cellData != None:
-                try:
-                    if indexDict['GPH'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])*2
-                except:
-                    pass
-                try:
-                    if indexDict['BTUS'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])*2
-                except:
-                    pass
-                try:
-                    if indexDict['EXH CFM'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])*2
-                except:
-                    pass
-                try:
-                    if indexDict['SUPPLY CFM'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])*2
-                except:
-                    pass
-                try:
-                    if indexDict['HEAT REJECTION'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])*2
-                except:
-                    pass
-            elif cellData != None:
+                
+            # Adjust for 'newlines' in cell
+            if "_x000D_" in str(cellData):
+                if (col == indexDict['AMPS'] or col == indexDict['GPH'] or col == indexDict['BTUS'] or col == indexDict['EXH CFM']
+                    or col == indexDict['SUPPLY CFM'] or col == indexDict['HEAT REJECTION'] and '(' not in str(cellData)):
+                    cellData = ' '.join(cellData.split("_x000D_"))
+                    print(str([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])+":"+str([float(s) for s in re.findall(r'\d+',cellData)]))
+                    cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
+                else:
+                    cellData = cellData.split("_x000D_")[0]
+
+            #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
+            if ')' in str(cellData) and col == indexDict['AMPS']:
+                cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                cellData = cellData[0] * cellData[1]
+                #cellData = str(float(cellData.split('(')[1].split(')')[0]) * float(cellData.split(')')[1].split('A')[0]))
+            
+            
+            if type(cellData) == str:
                 try:
                     if indexDict['GPH'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
                 except:
+                    print("GPH column not found")
                     pass
                 try:
                     if indexDict['BTUS'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
+                        cellData = re.findall(r'\d+',cellData)[0]
+                        if len(cellData) > 1:
+                            cellData[0]*cellData[1]
                 except:
+                    print("BTUS column not found")
                     pass
                 try:
                     if indexDict['EXH CFM'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
                 except:
+                    print("EXH CFM column not found")
                     pass
                 try:
                     if indexDict['SUPPLY CFM'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
-                except:
+                except Exception as e:
+                    print("SUPPLY CFM column not found")
+                    print(str(e))
                     pass
                 try:
                     if indexDict['HEAT REJECTION'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
                 except:
+                    print("HEAT REJECTION column not found")
                     pass
                 
             rowData.append(cellData)
@@ -187,12 +178,11 @@ def formatFile():
             continue
         
         #Add data
-        if sheetData[row][indexDict['AMPS']] != None and sheetData[row][indexDict['AMPS']] != '':
-            print(sheetData[row][indexDict['AMPS']])
-            sheetData[row][indexDict['AMPS']] = float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
+        if type(sheetData[row][indexDict['AMPS']]) == str and sheetData[row][indexDict['AMPS']] != '':
+            sheetData[row][indexDict['AMPS']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['AMPS']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
         if sheetData[row][indexDict['PH']] != None and sheetData[row][indexDict['PH']] != '':
             sheetData[row][indexDict['PH']] = float(sheetData[row][indexDict['PH']].split('PH')[0])
-        if sheetData[row][indexDict['VOLTS']] != None and sheetData[row][indexDict['VOLTS']] != '':
+        if type(sheetData[row][indexDict['VOLTS']]) == str and sheetData[row][indexDict['VOLTS']] != '':
             if '/' in sheetData[row][indexDict['VOLTS']]:
                 sheetData[row][indexDict['VOLTS']] = sheetData[row][indexDict['VOLTS']].split('/')[0]
             sheetData[row][indexDict['VOLTS']] = float(sheetData[row][indexDict['VOLTS']].split('V')[0])
