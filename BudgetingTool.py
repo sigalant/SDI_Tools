@@ -123,9 +123,10 @@ def formatFile():
                 rowData.append(row[item-1].value)
             except Exception:
                 rowData.append("")
-        if rowData[7] != None and rowData[7].lower() != "ea".lower():
+        '''
+        if rowData[7] != None: and rowData[7].lower() == "ft".lower():
             rowData[1] = 1
-
+        '''
         if rowData[2] != None: 
             rowData[2] = rowData[2].upper()
             if rowData[2] == "SPARENO":
@@ -256,7 +257,10 @@ def formatFile():
                 errorShown = True
 
             sheetNew[("A"+str(rowNum))] = data[i][0]
-            sheetNew[("B"+str(rowNum))] = data[i][1]
+            if data[i][7] != None and data[i][7].lower() == 'ft':
+                sheetNew[("B"+str(rowNum))] = 1
+            else:
+                sheetNew[("B"+str(rowNum))] = data[i][1]
             sheetNew[("C"+str(rowNum))] = data[i][2]
             sheetNew['C'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text = True)
             sheetNew[("D"+str(rowNum))] = data[i][6]
