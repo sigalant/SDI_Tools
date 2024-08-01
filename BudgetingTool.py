@@ -109,7 +109,13 @@ def formatFile():
         #Collect data from each row (Skipping empty cells)
         rowData = [] #To hold data for a single item
         print(row[0].fill.start_color.index)
-        if row[0].value == "ItemNo" or row[0].fill.start_color.index != 'FFFFFFFF':
+        
+        #row[0].fill.start_color.index[:2]   # Alpha (unimportant)
+        r = int(row[0].fill.start_color.index[2:4], 16)  # Red
+        g = int(row[0].fill.start_color.index[4:6], 16)  # Green
+        b = int(row[0].fill.start_color.index[6:8], 16)  # Blue
+        
+        if row[0].value == "ItemNo" or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16)):
             continue
         for item in filterList:
             try:
