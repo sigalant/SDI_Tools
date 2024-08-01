@@ -70,7 +70,7 @@ def formatFile():
     sheet = wb.active
 
     #Search for headers
-    filterList = [0,0,0,0,0,0,0,0] #To hold column index for [ItemNo, Qty, Category, Sell, Remarks, Specs, Model, Unit] 
+    filterList = [0,0,0,0,0,0,0,0,0] #To hold column index for [ItemNo, Qty, Category, Sell, Remarks, Specs, Model, Unit, SellTotal] 
 
     for cell in sheet[1]:
         if type(cell.value) is not str:
@@ -89,10 +89,10 @@ def formatFile():
             filterList[5] = cell.column
         if cell.value.lower() == "Model".lower():
             filterList[6] = cell.column
-
-        #Need to confirm this works the way I think...
         if cell.value.lower() == "Unit".lower():
             filterList[7] = cell.column
+        if cell.value.lower() == "SellTotal".lower():
+            filterList[8] = cell.column
     
 
     #Check for missing columns
@@ -270,6 +270,8 @@ def formatFile():
                 sheetNew[("F"+str(rowNum))] = float(data[i][3])*float(data[i][1])
             except Exception:
                 sheetNew[("F"+str(rowNum))] = data[i][3]
+            if (data[i][7] != None and 'ft' in data[i][7].lower()) or (data[i][4] != None and 'custom fab' in data[i][4].lower()):
+                sheetNew['F'+str(rowNum)] = data[i][8]
             sheetNew["F"+str(rowNum)].number_format = "$#,##0.00"
             sheetNew[("H"+str(rowNum))] = data[i][4]
             sheetNew['H'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text=True)
