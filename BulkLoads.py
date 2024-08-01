@@ -43,6 +43,7 @@ def formatFile():
 
     indexDict = {}
     sheetData = []
+    summingIndexes = []
 
     #Copy all data to a 2D-List, and save indexes of important values
     for row in sheet.rows:
@@ -51,27 +52,33 @@ def formatFile():
         for col in range(sheet.max_column):
             cellData = row[col].value
             
-                
+            
             #Get indexes from the first row
             match cellData:
                 case str(x) if 'AMPS' in x and 'AMPS' not in indexDict:
                     indexDict['AMPS'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'KW' in x and 'KW' not in indexDict:
                     indexDict['KW'] = col
                 case str(x) if 'GPH' in x or 'LPH' in x and 'GPH' not in indexDict:
                     indexDict['GPH'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'BTUS' in x and 'BTUS' not in indexDict:
                     indexDict['BTUS'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'EXH CFM' in x and 'EXH CFM' not in indexDict:
                     indexDict['EXH CFM'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'SUPPLY CFM' in x and 'SUPPLY CFM' not in indexDict:
                     indexDict['SUPPLY CFM'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'VOLTS' in x and 'VOLTS' not in indexDict:
                     indexDict['VOLTS'] = col
                 case str(x) if 'PH' in x and 'PH' not in indexDict:
                     indexDict['PH'] = col
                 case str(x) if 'HEAT REJECTION' in x and 'HEAT REJECTION' not in indexDict:
                     indexDict['HEAT REJECTION'] = col
+                    summingIndexes.append(col)
                 case _:
                     pass
 
@@ -81,10 +88,9 @@ def formatFile():
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                if (col == indexDict['AMPS'] or col == indexDict['GPH'] or col == indexDict['BTUS'] or col == indexDict['EXH CFM']
-                    or col == indexDict['SUPPLY CFM'] or col == indexDict['HEAT REJECTION'] and '(' not in str(cellData)):
+                print(summingIndexes)
+                if (col in summingIndexes and '(' not in str(cellData)):
                     cellData = ' '.join(cellData.split("_x000D_"))
-                    print(str([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])+":"+str([float(s) for s in re.findall(r'\d+',cellData)]))
                     cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
                 else:
                     cellData = cellData.split("_x000D_")[0]
@@ -96,38 +102,48 @@ def formatFile():
                 #cellData = str(float(cellData.split('(')[1].split(')')[0]) * float(cellData.split(')')[1].split('A')[0]))
             
             
-            if type(cellData) == str:
+            if type(cellData) == str and row[col].row>1 and col in summingIndexes:
                 try:
                     if indexDict['GPH'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
-                except:
+                except Exception as e:
+                    print(cellData)
+                    print("Error: " + str(e))
                     print("GPH column not found")
                     pass
                 try:
                     if indexDict['BTUS'] == col:
-                        cellData = re.findall(r'\d+',cellData)[0]
+                        cellData = re.findall(r'\d+',cellData)
                         if len(cellData) > 1:
-                            cellData[0]*cellData[1]
-                except:
+                            cellData = int(cellData[0])*int(cellData[1])
+                        else:
+                            cellData = int(cellData[0])
+                except Exception as e:
+                    print(cellData)
+                    print("Error: " + str(e))
                     print("BTUS column not found")
                     pass
                 try:
                     if indexDict['EXH CFM'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
-                except:
+                except Exception as e:
+                    print(cellData)
+                    print("Error: " + str(e))
                     print("EXH CFM column not found")
                     pass
                 try:
                     if indexDict['SUPPLY CFM'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
                 except Exception as e:
+                    print(cellData)
+                    print("Error: " + str(e))
                     print("SUPPLY CFM column not found")
-                    print(str(e))
-                    pass
                 try:
                     if indexDict['HEAT REJECTION'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
-                except:
+                except Exception as e:
+                    print(cellData)
+                    print("Error: " + str(e))
                     print("HEAT REJECTION column not found")
                     pass
                 
