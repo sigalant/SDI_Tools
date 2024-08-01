@@ -108,7 +108,8 @@ def formatFile():
     for row in sheet.rows:
         #Collect data from each row (Skipping empty cells)
         rowData = [] #To hold data for a single item
-        if row[0].value == "ItemNo":
+        print(row[0].fill.start_color.index)
+        if row[0].value == "ItemNo" or row[0].fill.start_color.index != 'FFFFFFFF':
             continue
         for item in filterList:
             try:
@@ -125,11 +126,14 @@ def formatFile():
                 rowData[2] = 'SpareNo'
                 rowData[1] = '-'
                 rowData[3] = ''
-            #    rowData[4] = ''
-        if "os&e" in str(rowData[6]).lower() or "vendor" in str(rowData[6]).lower():
-            rowData[3] = 'NIC'
-            #rowData[4] = 'NIC'
-        #Add data from row to 2D array of all project data
+
+        #Check if item not in contract
+        if type(rowData[4]) == str:
+            if "os&e" in str(rowData[4]).lower() or "vendor" in str(rowData[4]).lower() or 'contractor' in str(rowData[4]).lower() or 'millwork' in str(rowData[4]).lower():
+                rowData[3] = 'NIC'
+            elif "os&e" in str(rowData[6]).lower():
+                rowData[3] = 'NIC'
+        #Add data for row to 2D array of all project data
         data.append(rowData)
         
 
