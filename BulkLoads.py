@@ -11,7 +11,7 @@ outputFilepath = ""
 root = tk.Tk()
 
 root.title("SDI Bulk Loads Formatting Tool")
-root.geometry("800x400")
+root.geometry("800x450")
 
 #TODO: Change this filepath to something that makes sense
 ico= Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
@@ -21,9 +21,9 @@ root.wm_iconphoto(False, photo)
 errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
 errorMsg = tk.Label(errorFrame, text="")
-errorMsg.pack(pady=50)
+errorMsg.pack(pady=40)
 
-def formatFile():
+def formatFile(voltList):
     if inputFilepath == '':
         errorMsg.config(text= "Error: No input file selected")
         return
@@ -88,7 +88,6 @@ def formatFile():
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                print(summingIndexes)
                 if (col in summingIndexes and '(' not in str(cellData)):
                     cellData = ' '.join(cellData.split("_x000D_"))
                     cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
@@ -201,12 +200,17 @@ def formatFile():
         if type(sheetData[row][indexDict['VOLTS']]) == str and sheetData[row][indexDict['VOLTS']] != '':
             if '/' in sheetData[row][indexDict['VOLTS']]:
                 sheetData[row][indexDict['VOLTS']] = sheetData[row][indexDict['VOLTS']].split('/')[0]
-            sheetData[row][indexDict['VOLTS']] = float(sheetData[row][indexDict['VOLTS']].split('V')[0])
+            v = float(sheetData[row][indexDict['VOLTS']].split('V')[0])
+            sheetData[row][indexDict['VOLTS']] = v
             try:
                 sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"       
             except:
                 pass
         sheetNew.append(sheetData[row])
+        try:
+            if float(sheetData[row][indexDict['VOLTS']]) not in voltList:
+                sheetNew[row+7][indexDict['VOLTS']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
+        except:
         sheetNew[sheetNew.max_row][indexDict['AMPS']].number_format="0.0"
         try:
             sheetNew[sheetNew.max_row][indexDict['KW']].number_format="0.00"
@@ -264,10 +268,14 @@ def formatFile():
 
 
 frame = tk.Frame(root)
-frame.pack(padx=40, pady=40)
+frame.pack(padx=40, pady=20)
+
+voltFrame = tk.Frame(root)
+voltFrame.pack(pady=20)
 
 fileFrame = tk.Frame(root)
 fileFrame.pack()
+
 
 bottomFrame = tk.Frame(root)
 bottomFrame.pack()
@@ -278,12 +286,64 @@ in_text.pack(side=tk.TOP)
 out_text = tk.Label(fileFrame, text = "The output folder is: " + outputFilepath)
 out_text.pack(side=tk.TOP)
 
-format_button = tk.Button(bottomFrame, text="format file", command=formatFile)
-format_button.pack(padx=10, pady=30, side=tk.BOTTOM)
+voltLabel = tk.Label(voltFrame, text="Enter acceptable voltages:")
+voltLabel.pack(side=tk.TOP)
+voltEntries = []
+
+def tab_pressed(event):
+    if voltEntries.index(event.widget)+1<len(voltEntries):
+        voltEntries[voltEntries.index(event.widget)+1].focus_set()
+    else:
+        voltEntries[0].focus_set()
+    return "break"
+
+def addVolt(butts):
+    voltText = tk.Text(voltFrame, height = 1, width = 10)
+    voltText.bind('<Tab>', tab_pressed)
+    voltText.bind('<Return>', tab_pressed)
+    voltText.pack(padx=10, pady=10, side = tk.LEFT)
+    voltEntries.append(voltText)
+    if(len(voltEntries) >= 5):
+        butts[0].pack_forget()
+    butts[1].pack(side=tk.RIGHT)
+def removeVolt(butts):
+    voltText = voltEntries.pop()
+    voltText.destroy()
+    if(len(voltEntries) <= 1):
+        butts[1].pack_forget()
+    butts[0].pack(side=tk.RIGHT)
+voltButtons=[None,None]
+addVoltButton = tk.Button(voltFrame, text = "+", command=lambda:addVolt(voltButtons))
+removeVoltButton = tk.Button(voltFrame, text = "-", command=lambda:removeVolt(voltButtons))
+voltButtons[0]=addVoltButton
+voltButtons[1]=removeVoltButton
+
+
+
+for i in range(3):
+    voltText = tk.Text(voltFrame, height = 1, width = 10)
+    voltText.bind('<Tab>', tab_pressed)
+    voltText.bind('<Return>', tab_pressed)
+    voltText.pack(padx=10, pady=10, side = tk.LEFT)
+    voltEntries.append(voltText)
+
+removeVoltButton.pack(padx=1,pady=1,side=tk.RIGHT)
+addVoltButton.pack(padx=1,pady=1, side =tk.RIGHT)
+
+
+def form():
+    try:
+        voltList = [float(t.get("1.0", 'end-1c')) for t in voltEntries]
+        formatFile(voltList)
+    except:
+        print("Atleast one value entered was not a number!")
+
+format_button = tk.Button(bottomFrame, text="format file", command=form)
+format_button.pack(padx=10, pady=10, side=tk.BOTTOM)
 
 def getFilepath():
     global inputFilepath
-    inputFilepath = filedialog.askopenfilename(filetypes=(("Micorsoft Excel Worksheet", "*.xlsx"),))
+    inputFilepath = filedialog.askopenfilename(filetypes=(("Microsoft Excel Worksheet", "*.xlsx"),))
     in_text.config(text="The input file is: " + inputFilepath)
 
 def getOutputFolder():
@@ -292,10 +352,10 @@ def getOutputFolder():
     out_text.config(text="The output folder is: " + outputFilepath)
 
 in_file = tk.Button(frame, text="select input file", command=getFilepath)
-in_file.pack(padx=10, pady=15, side=tk.LEFT)
+in_file.pack(padx=20, pady=15, side=tk.LEFT)
 
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
-out_folder.pack(padx=10, pady=15, side=tk.LEFT)
+out_folder.pack(padx=20, pady=15, side=tk.LEFT)
 
 root.mainloop()
     
