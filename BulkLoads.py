@@ -1,15 +1,24 @@
+#Imports
+import LogErrors
 import openpyxl as opx
 import tkinter as tk
 import re
+import sys
 from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
 
+#sys.excepthook = LogErrors.handle_exception
+
+#Holds I/O filepaths
 inputFilepath = ""
 outputFilepath = ""
 
-root = tk.Tk()
 
+
+#Root window
+root = tk.Tk()
+root.report_callback_exception = LogErrors.handle_exception
 root.title("SDI Bulk Loads Formatting Tool")
 root.geometry("800x450")
 
@@ -18,19 +27,22 @@ ico= Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
+#For displaying errors to user
 errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
 errorMsg = tk.Label(errorFrame, text="")
 errorMsg.pack(pady=40)
 
 def formatFile(voltList):
+    #Stop if I/O paths not provided
     if inputFilepath == '':
         errorMsg.config(text= "Error: No input file selected")
         return
-    if outputFilepath =='':
+    if outputFilepath == '':
         errorMsg.config(text="Error: No output file selected")
         return
-    errorMsg.config(text="Something Broke...")
+    #message returned if unhandled exception
+    errorMsg.config(text="There was an error...")
 
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
@@ -106,6 +118,7 @@ def formatFile(voltList):
                     if indexDict['GPH'] == col:
                         cellData = float(re.findall(r'\d+',cellData)[0])
                 except Exception as e:
+                    
                     print(cellData)
                     print("Error: " + str(e))
                     print("GPH column not found")
@@ -211,7 +224,11 @@ def formatFile(voltList):
             if float(sheetData[row][indexDict['VOLTS']]) not in voltList:
                 sheetNew[row+7][indexDict['VOLTS']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
         except:
-        sheetNew[sheetNew.max_row][indexDict['AMPS']].number_format="0.0"
+            pass
+        try:
+            sheetNew[sheetNew.max_row][indexDict['AMPS']].number_format="0.0"
+        except:
+            pass
         try:
             sheetNew[sheetNew.max_row][indexDict['KW']].number_format="0.00"
         except:
@@ -334,9 +351,11 @@ addVoltButton.pack(padx=1,pady=1, side =tk.RIGHT)
 def form():
     try:
         voltList = [float(t.get("1.0", 'end-1c')) for t in voltEntries]
-        formatFile(voltList)
     except:
-        print("Atleast one value entered was not a number!")
+        errorMsg.config(text="Error: All acceptable voltages should be numbers")
+        return
+
+    formatFile(voltList)
 
 format_button = tk.Button(bottomFrame, text="format file", command=form)
 format_button.pack(padx=10, pady=10, side=tk.BOTTOM)
