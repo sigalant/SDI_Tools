@@ -4,6 +4,7 @@ import openpyxl as opx
 import tkinter as tk
 import re
 import sys
+import traceback
 from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
@@ -15,15 +16,27 @@ inputFilepath = ""
 outputFilepath = ""
 
 
-
 #Root window
 root = tk.Tk()
-root.report_callback_exception = LogErrors.handle_exception
+
 root.title("SDI Bulk Loads Formatting Tool")
 root.geometry("800x450")
 
+#Opens popup window with traceback if unhandled exception
+def handle_exception(exc,val,tb):
+    top = tk.Toplevel(root)
+    top.geometry("800x400")
+    top.title("ERROR")
+    tk.Label(top, text="ERROR: \n", font=(25)).pack(pady=10)
+    tk.Label(top, text="".join(traceback.format_exception(exc,val,tb))).pack()
+    tk.Button(top, text="OK", command = top.destroy).pack()
+    root.wait_window(top)
+    LogErrors.handle_exception(exc,val,tb)
+
+root.report_callback_exception = handle_exception
+
 #TODO: Change this filepath to something that makes sense
-ico= Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
+ico= Image.open("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.ico")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
@@ -39,10 +52,10 @@ def formatFile(voltList):
         errorMsg.config(text= "Error: No input file selected")
         return
     if outputFilepath == '':
-        errorMsg.config(text="Error: No output file selected")
+        errorMsg.config(text="Error: No output folder selected")
         return
-    #message returned if unhandled exception
-    errorMsg.config(text="There was an error...")
+    #message displayed if everything works
+    errorMsg.config(text="File Successfully Formatted")
 
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
@@ -53,14 +66,17 @@ def formatFile(voltList):
     wbNew=opx.Workbook()
     sheetNew=wbNew.active
 
-    indexDict = {}
-    sheetData = []
-    summingIndexes = []
-
+    indexDict = {}#Holds index of important values
+    sheetData = []#Holds all data from the sheet
+    summingIndexes = []#Holds indexes of values that sum (probably not necessary)
+    
     #Copy all data to a 2D-List, and save indexes of important values
     for row in sheet.rows:
-        rowData = []
-        double = False
+        rowData = []#Holds all data from a row
+        mult=1.0 #Holds value in paranthesis from amp cell
+        
+        double = False #I don't think im using this anymore...
+
         for col in range(sheet.max_column):
             cellData = row[col].value
             
@@ -86,8 +102,10 @@ def formatFile(voltList):
                     summingIndexes.append(col)
                 case str(x) if 'VOLTS' in x and 'VOLTS' not in indexDict:
                     indexDict['VOLTS'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'PH' in x and 'PH' not in indexDict:
                     indexDict['PH'] = col
+                    summingIndexes.append(col)
                 case str(x) if 'HEAT REJECTION' in x and 'HEAT REJECTION' not in indexDict:
                     indexDict['HEAT REJECTION'] = col
                     summingIndexes.append(col)
@@ -100,16 +118,30 @@ def formatFile(voltList):
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                if (col in summingIndexes and '(' not in str(cellData)):
-                    cellData = ' '.join(cellData.split("_x000D_"))
-                    cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
+                if col in summingIndexes:# and '(' not in str(cellData)):
+                    if '(' in str(cellData) and col == indexDict['AMPS']:
+                        cellData = (cellData.split("_x000D_"))
+                        for i in range(len(cellData)):
+                            if '(' in cellData[i]:
+                                fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
+                                cellData[i] = fList[0]*fList[1]
+                            else:
+                                cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
+                    elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
+                        cellData = ' '.join(cellData.split("_x000D_"))
+                        cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                    else:
+                        cellData = ' '.join(cellData.split("_x000D_"))
+                        cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
                 else:
                     cellData = cellData.split("_x000D_")[0]
 
             #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
-            if ')' in str(cellData) and col == indexDict['AMPS']:
+            if ')' in str(cellData) and col == indexDict['AMPS']:# and not (type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or type(rowData[indexDict['AMPS']]) == list):
                 cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                mult= cellData[0]
                 cellData = cellData[0] * cellData[1]
+                
                 #cellData = str(float(cellData.split('(')[1].split(')')[0]) * float(cellData.split(')')[1].split('A')[0]))
             
             
@@ -160,10 +192,60 @@ def formatFile(voltList):
                     pass
                 
             rowData.append(cellData)
-                
-        sheetData.append(rowData)
 
-    #File Heading
+        #Make error message if an index is missing
+        indexes = ['AMPS','PH','VOLTS','KW','GPH','BTUS','EXH CFM','SUPPLY CFM', 'HEAT REJECTION']
+        missing = []
+        for index in indexes:
+            if index not in indexDict:
+                missing.append(index)
+        if missing:
+            errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
+            errorMsg.config(text=errorStr)
+            return
+
+        #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
+        if type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or type(rowData[indexDict['AMPS']]) == list:
+            vs=rowData[indexDict['VOLTS']]
+            ps=rowData[indexDict['PH']]
+            ams=rowData[indexDict['AMPS']]
+            
+            for i in range(2):
+                newRow = rowData.copy()
+                try:
+                    assert type(vs) != str
+                    newRow[indexDict['VOLTS']] = vs[i]
+                except:
+                    newRow[indexDict['VOLTS']] = vs
+                try:
+                    assert type(ps) != str
+                    newRow[indexDict['PH']] = ps[i]
+                except:
+                    newRow[indexDict['PH']] = ps
+                try:
+                    assert type(ams) != str
+                    newRow[indexDict['AMPS']] = ams[i]
+                except:
+                    if type(ams) == str:
+                        newRow[indexDict['AMPS']] = ams
+                    else:
+                        newRow[indexDict['AMPS']] = ams/mult
+                try:
+                    if(i):
+                        newRow[indexDict['BTUS']] = None
+                        newRow[indexDict['EXH CFM']] = None
+                        newRow[indexDict['SUPPLY CFM']] = None
+                        newRow[indexDict['HEAT REJECTION']] = None
+                except:
+                    print('A Summing field may be missing')
+                sheetData.append(newRow)
+        else:
+            sheetData.append(rowData)
+            
+    
+
+    
+    #Excel File Heading
     sheetNew.row_dimensions[1].height=30
     sheetNew.row_dimensions[2].height=30.75
     sheetNew.row_dimensions[3].height=23.25
@@ -181,7 +263,8 @@ def formatFile(voltList):
     sheetNew.column_dimensions['G'].width = 10
     sheetNew.column_dimensions['H'].width = 10
 
-    img = opx.drawing.image.Image("V:\\Budget\\Autoquotes Budget Script\\SDI Logo.jpg")
+    
+    img = opx.drawing.image.Image("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.PNG")
     img.height=40
     img.width=65
     sheetNew.add_image(img, "A1")
@@ -191,8 +274,8 @@ def formatFile(voltList):
     sheetNew['A4'] = str(date.today().strftime("%B %d, %Y"))
     sheetNew['A4'].font = opx.styles.Font(size=18, bold=True)
     sheetNew.append([''])
-    #Add data to sheet
-        
+
+    #Add data to sheet        
     sheetNew.append(sheetData[0])
     sheetNew.freeze_panes = sheetNew['C7']
     
@@ -208,17 +291,17 @@ def formatFile(voltList):
         #Add data
         if type(sheetData[row][indexDict['AMPS']]) == str and sheetData[row][indexDict['AMPS']] != '':
             sheetData[row][indexDict['AMPS']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['AMPS']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
-        if sheetData[row][indexDict['PH']] != None and sheetData[row][indexDict['PH']] != '':
+        if type(sheetData[row][indexDict['PH']]) == str and sheetData[row][indexDict['PH']] != '':
             sheetData[row][indexDict['PH']] = float(sheetData[row][indexDict['PH']].split('PH')[0])
-        if type(sheetData[row][indexDict['VOLTS']]) == str and sheetData[row][indexDict['VOLTS']] != '':
-            if '/' in sheetData[row][indexDict['VOLTS']]:
-                sheetData[row][indexDict['VOLTS']] = sheetData[row][indexDict['VOLTS']].split('/')[0]
-            v = float(sheetData[row][indexDict['VOLTS']].split('V')[0])
+        if sheetData[row][indexDict['VOLTS']] != None and sheetData[row][indexDict['VOLTS']] != '':
+            if '/' in str(sheetData[row][indexDict['VOLTS']]):
+                sheetData[row][indexDict['VOLTS']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
+            v = float(str(sheetData[row][indexDict['VOLTS']]).split('V')[0])
             sheetData[row][indexDict['VOLTS']] = v
             try:
                 sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"       
-            except:
-                pass
+            except Exception as e:
+                print(e)
         sheetNew.append(sheetData[row])
         try:
             if float(sheetData[row][indexDict['VOLTS']]) not in voltList:
@@ -307,6 +390,7 @@ voltLabel = tk.Label(voltFrame, text="Enter acceptable voltages:")
 voltLabel.pack(side=tk.TOP)
 voltEntries = []
 
+#Switch to next text box wher 'TAB' or 'RETURN' key pressed
 def tab_pressed(event):
     if voltEntries.index(event.widget)+1<len(voltEntries):
         voltEntries[voltEntries.index(event.widget)+1].focus_set()
@@ -314,6 +398,7 @@ def tab_pressed(event):
         voltEntries[0].focus_set()
     return "break"
 
+#Add a new text box when the '+' button is pressed
 def addVolt(butts):
     voltText = tk.Text(voltFrame, height = 1, width = 10)
     voltText.bind('<Tab>', tab_pressed)
@@ -323,6 +408,8 @@ def addVolt(butts):
     if(len(voltEntries) >= 5):
         butts[0].pack_forget()
     butts[1].pack(side=tk.RIGHT)
+
+#Delete a text box when the '-' button is pressed
 def removeVolt(butts):
     voltText = voltEntries.pop()
     voltText.destroy()
