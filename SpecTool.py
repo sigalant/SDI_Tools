@@ -1,6 +1,7 @@
 #SDI Specs Formatting Tool
 
 #Imports
+import LogErrors
 import SpecDB as db
 import sqlite3
 
@@ -8,6 +9,9 @@ import docx as d
 import openpyxl as opx
 import num2words as n2m
 import re
+
+import sys
+import traceback
 
 import tkinter as tk
 from tkinter import filedialog,ttk
@@ -28,6 +32,18 @@ root = tk.Tk()
 
 root.title("SDI Specs Formatting Tool")
 root.geometry("800x500")
+
+def handle_exception(exc,val,tb):
+    top=tk.Toplevel(root)
+    top.geometry("800x400")
+    top.title("Error")
+    tk.Label(top, text="ERROR: \n", font=(25)).pack()
+    tk.Label(top, text="".join(traceback.format_exception(exc,val,tb))).pack()
+    tk.Button(top, text="OK", command=top.destroy).pack()
+    root.wait_window(top)
+    LogErrors.handle_exception(exc,val,tb)
+root.report_callback_exception = handle_exception
+
 ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
@@ -434,7 +450,7 @@ def writeSpecs(msgLabel):
                     for value in values:
                         cfm.append(value[:4] + " CFM Exhaust")
 
-            if row[headerIndexes[1]+6].value != None:
+            if type(row[headerIndexes[1]+6].value) == str:
                 values = row[headerIndexes[1]+6].value.split()
                 for value in values:
                     cfm.append(value[:4] + " CFM Supply")
