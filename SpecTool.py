@@ -33,6 +33,7 @@ root = tk.Tk()
 root.title("SDI Specs Formatting Tool")
 root.geometry("800x500")
 
+#Catch unhandled errors and report them
 def handle_exception(exc,val,tb):
     top=tk.Toplevel(root)
     top.geometry("800x400")
@@ -44,18 +45,23 @@ def handle_exception(exc,val,tb):
     LogErrors.handle_exception(exc,val,tb)
 root.report_callback_exception = handle_exception
 
-ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
-photo = ImageTk.PhotoImage(ico)
-root.wm_iconphoto(False, photo)
+try:
+    ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
+    photo = ImageTk.PhotoImage(ico)
+    root.wm_iconphoto(False, photo)
+except:
+    print("SDI Logo not found at: V:\\Specs\\Specs Script\\SDI Logo.jpg")
 
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
-    temp = d.Document(tempDocPath)
-    i = 0
-    print(tempDocPath)
-    specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
-
+    specText = None
+    try:
+        specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
+    except:
+        print("Specs not found for: " + tempDocPath)
+        return
     #Begin copying after header
+    i = 0
     while i<len(specText) and "Utilities" not in specText[i]:
         i = i + 1
         
@@ -81,10 +87,10 @@ def copySpecs(tempDocPath, p, highlight, cur):
             g=int(specText[j+1][2:4],16)
             b=int(specText[j+1][4:6],16)
             
-            redRun = p.add_run(specText[j])
-            redRun.font.color.rgb = d.shared.RGBColor(r,g,b)
+            colorRun = p.add_run(specText[j])
+            colorRun.font.color.rgb = d.shared.RGBColor(r,g,b)
             if highlight:
-                redRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
+                colorRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
             j= j+1
         j=j+1
 
@@ -142,8 +148,20 @@ def findSpecs(msgLabel):
                             headerIndexes[3] = i
                         case _:
                             pass
+
                 if -1 in headerIndexes:
-                    msgLabel.config(text="Warning: One of the headers is missing from the input file")
+                    tempStr = [] 
+                    if headerIndexes[0] == -1:
+                        tempStr.append("EQUIPMENT")
+                    if headerIndexes[1] == -1:
+                        tempStr.append("VENTILATION")
+                    if headerIndexes[2] == -1:
+                        tempStr.append("PLUMBING")
+                    if headerIndexes[3] == -1:
+                        tempStr.append("ELECTRICAL")
+                            
+                    msgLabel.config(text="ERROR: The following header(s) are missing from the input file: " + ", ".join(tempStr))
+                    return
             continue
 
         #Test that "might" catch wrong input files
@@ -181,13 +199,16 @@ def findSpecs(msgLabel):
 
             #If there was a match, add a link to the xlsx file
             if matches:
+
+                if len(matches) > 1:
+                    #TODO: Copy choice popup here
+                    pass
+                
                 newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('/')[len(matches[0][0].split('/'))-1].split('.docx')[0] +"\")"
                 for i in range(0,4):
                     newSheet[rowIndex][i].fill = noFill
                 
-                if len(matches) > 1:
-                    #TODO: Copy choice popup here
-                    pass
+                
                 
             #Else look for partial matches
             else:
@@ -233,7 +254,7 @@ def writeSpecs(msgLabel):
     header_font.size = d.shared.Pt(10)
     header_font.name = 'Univers LT Std 55'
 
-    msgLabel.config(text="Error: Please confirm input file is correct")
+    msgLabel.config(text="Working...")
 
     #Open Revit output
     try:
@@ -257,8 +278,8 @@ def writeSpecs(msgLabel):
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
-    onlyfiles = []
-    refSheet = None
+    onlyfiles = [] #MAYBE NOT USEFUL ANYMORE
+    refSheet = None #I DONT THINK THIS IS USED IN THIS SCOPE
 
     #If there's a ref sheet, copy item information for later searching
     if excelFilepath:
@@ -300,7 +321,18 @@ def writeSpecs(msgLabel):
                         case _:
                             pass
                 if -1 in headerIndexes:
-                    print("Header missing?!??!?!")        
+                    tempStr = [] 
+                    if headerIndexes[0] == -1:
+                        tempStr.append("EQUIPMENT")
+                    if headerIndexes[1] == -1:
+                        tempStr.append("VENTILATION")
+                    if headerIndexes[2] == -1:
+                        tempStr.append("PLUMBING")
+                    if headerIndexes[3] == -1:
+                        tempStr.append("ELECTRICAL")
+                            
+                    msgLabel.config(text="ERROR: The following header(s) are missing from the input file: " + ", ".join(tempStr))
+                    return       
             
 
         #Add section header (location/area)
@@ -308,6 +340,7 @@ def writeSpecs(msgLabel):
             p = doc.add_paragraph('', style = 'Spec_Header')
             p.alignment = 1
             p.add_run(row[0].value + "\n").bold = True
+
 #HEADERS        
         #Create spec header with info from Revit output
         else:
@@ -326,10 +359,12 @@ def writeSpecs(msgLabel):
             run = run + ("ITEM #" + str(row[headerIndexes[0]].value) + ":")
             run = run + ("\t" + str(row[headerIndexes[0]+4].value))
 
+            #Maybe catches incorrect file related errors
             try:
                 row[headerIndexes[0]+5].value != None
                 "SPARE NUMBER" in row[headerIndexes[0]+4].value
             except:
+                msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
                 return
 
             #Check if not in contract
@@ -353,9 +388,12 @@ def writeSpecs(msgLabel):
 
             #Quantity
             run = run + ("\nQuantity:\t")
-            run = run + (n2m.num2words(row[headerIndexes[0]+1].value).capitalize() + " (" + str(row[headerIndexes[0]+1].value) + ")")
-        
-            #If not in contract, add pert. data and skip rest
+            try:
+                run = run + (n2m.num2words(row[headerIndexes[0]+1].value).capitalize() + " (" + str(row[headerIndexes[0]+1].value) + ")")
+            except:
+                run = run + str(row[headerIndexes[0]+1].value)
+                
+            #If not in contract, add pert. data
             if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower()):
                 run = run+ ("\nPertinent Data:\t")
                 if(row[headerIndexes[0]+5].value == None):
@@ -517,7 +555,7 @@ def writeSpecs(msgLabel):
                 p = doc.add_paragraph('', style = 'Spec_Header')
                 remaining = (row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value))           
                 name = ""
-                if row[headerIndexes[0]+4].value.lower() != None:
+                if row[headerIndexes[0]+4].value != None:
                     name = row[headerIndexes[0]+4].value.lower()
                 specText = ""
                 if(remaining):
@@ -558,9 +596,9 @@ def writeSpecs(msgLabel):
 
                 matches = []
                 if specData[1] == "Custom Fabrication":
-                    matches = cur.execute("SELECT * FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()#db.itemTable.search((Query()['Description'].matches('(?i)'+str(specData[0])) & (Query()['Manufacturer'].matches('Custom Fabrication'))))
+                    matches = cur.execute("SELECT * FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()
                 else:
-                    matches = cur.execute("SELECT * FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()#db.itemTable.search(Query()['Model_No.'].search(specData[2]))
+                    matches = cur.execute("SELECT * FROM item WHERE model='" + str(specData[2]).replace("'","''").replace('"','""') + "'").fetchall()
                 
                 if matches:
                     specDoc = ""
@@ -604,7 +642,7 @@ def writeSpecs(msgLabel):
                     if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
                         matches = cur.execute("SELECT doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
                     if not matches: 
-                        matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()#db.itemTable.search((Query()['Description'].search('(?i)'+str(specData[0])) & (Query()['Manufacturer'].search('(?i)'+str(specData[1])))))
+                        matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
                     if matches:
                         copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
                 
@@ -700,7 +738,7 @@ def ModifyEntry(con, tv, root):
         return
     
     itemInfo = tv.item(item)
-    #print(itemInfo)
+
     #popup with info for changes
     top=tk.Toplevel(root)
     top.geometry("500x350")
@@ -795,7 +833,7 @@ def AddEntry(con, tv):
         except:
             print("Not this one: " + f)
         print(f)
-        con.commit()
+    con.commit()
     
     
 #Temporary Placeholder Function
@@ -922,6 +960,8 @@ def DBWindow():
     submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
     submit.grid(row=0, column=4, columnspan=2, padx = 20, pady=20)
 
+    #add error message box here!
+
 #Create Window for Writing Specs Function
 def wsWindow():
     for widget in root.winfo_children():
@@ -963,6 +1003,7 @@ def wsWindow():
     submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel))
     submitButton.grid(row=7, column = 3, pady = 20)
 
+#No longer being used
 #Create Window for Finding Specs Function
 def fsWindow():
     for widget in root.winfo_children():
