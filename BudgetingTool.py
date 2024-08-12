@@ -5,7 +5,9 @@ import tkinter.ttk as ttk
 from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
+import sys
+import traceback
+import LogErrors
 
 inputFilepath = ""
 outputFilepath = ""
@@ -22,6 +24,19 @@ root.geometry("800x500")
 ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
+
+#Opens popup window with traceback of unhandled exceptions in tkinter window  
+def handle_exception(exc,val,tb):
+    top=tk.Toplevel(root)
+    top.geometry("800x400")
+    top.title("ERROR")
+    tk.Label(top,text="ERROR: \n", font=(25)).pack(pady=10)
+    tk.Label(top,text="".join(traceback.format_exception(exc,val,tb))).pack()
+    tk.Button(top, text="OK", command = top.destroy).pack()
+    root.wait_window(top)
+    LogErrors.handle_exception(exc,val,tb)
+
+root.report_callback_exception = handle_exception
 
 inputFrame = tk.Frame(root)
 inputFrame.pack()
