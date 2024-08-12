@@ -109,12 +109,33 @@ def formatFile():
         if cell.value.lower() == "SellTotal".lower():
             filterList[8] = cell.column
     
-
+    missing = []
     #Check for missing columns
+    for i in range(len(filterList)):
+        if filterList[i]==0:
+            match i:
+                case 0:
+                    missing.append("ItemNo")
+                case 1:
+                    missing.append("Qty")
+                case 2:
+                    missing.append("Category")
+                case 3:
+                    missing.append("Sell")
+                case 4:
+                    missing.append("Remarks")
+                case 5:
+                    missing.append("Spec")
+                case 6:
+                    missing.append("Model")
+                case 7:
+                    missing.append("Unit")
+                case 8:
+                    missing.append("SellTotal")
     try:
         assert (0 not in filterList), "Column may be missing"
     except Exception as e:
-        errorMsg.config(text="Warning: One or more columns may be missing")
+        errorMsg.config(text="Warning: The following header(s) may be missing: " + ", ".join(missing))
 
     #Fill 2D Array with information
 
@@ -123,7 +144,7 @@ def formatFile():
     for row in sheet.rows:
         #Collect data from each row (Skipping empty cells)
         rowData = [] #To hold data for a single item
-        print(row[0].fill.start_color.index)
+        #print(row[0].fill.start_color.index)
         
         #row[0].fill.start_color.index[:2]   # Alpha (unimportant)
         r = int(row[0].fill.start_color.index[2:4], 16)  # Red
@@ -131,6 +152,7 @@ def formatFile():
         b = int(row[0].fill.start_color.index[6:8], 16)  # Blue
         
         if row[0].value == "ItemNo" or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16)):
+            print(str(row[0].fill.start_color.index) + ":" + str(row[0].row))
             continue
         for item in filterList:
             try:
