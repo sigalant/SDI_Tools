@@ -35,7 +35,6 @@ def handle_exception(exc,val,tb):
 
 root.report_callback_exception = handle_exception
 
-#TODO: Change this filepath to something that makes sense
 ico= Image.open("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.ico")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
@@ -75,7 +74,6 @@ def formatFile(voltList):
         rowData = []#Holds all data from a row
         mult=1.0 #Holds value in paranthesis from amp cell
         
-        double = False #I don't think im using this anymore...
 
         for col in range(sheet.max_column):
             cellData = row[col].value
@@ -118,32 +116,35 @@ def formatFile(voltList):
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                if col in summingIndexes:# and '(' not in str(cellData)):
-                    if '(' in str(cellData) and col == indexDict['AMPS']:
-                        cellData = (cellData.split("_x000D_"))
-                        for i in range(len(cellData)):
-                            if '(' in cellData[i]:
-                                fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
-                                cellData[i] = fList[0]*fList[1]
-                            else:
-                                cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
-                    elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
-                        cellData = ' '.join(cellData.split("_x000D_"))
-                        cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
-                    else:
-                        cellData = ' '.join(cellData.split("_x000D_"))
+                if col in summingIndexes:
+
+                    try:
+                        if '(' in str(cellData) and col == indexDict['AMPS']:
+                            cellData = (cellData.split("_x000D_"))
+                            for i in range(len(cellData)):
+                                if '(' in cellData[i]:
+                                    fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
+                                    cellData[i] = fList[0]*fList[1]
+                                else:
+                                    cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
+                        elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
+                            cellData = ' '.join(cellData.split("_x000D_"))
+                            cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                        else:
+                            cellData = ' '.join(cellData.split("_x000D_"))
                         cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
+                    except Exception as e:
+                        print("Something went wrong:" + str(e))
                 else:
                     cellData = cellData.split("_x000D_")[0]
-
-            #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
-            if ')' in str(cellData) and col == indexDict['AMPS']:# and not (type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or type(rowData[indexDict['AMPS']]) == list):
-                cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
-                mult= cellData[0]
-                cellData = cellData[0] * cellData[1]
-                
-                #cellData = str(float(cellData.split('(')[1].split(')')[0]) * float(cellData.split(')')[1].split('A')[0]))
-            
+            try:
+                #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
+                if ')' in str(cellData) and col == indexDict['AMPS']:
+                    cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                    mult= cellData[0]
+                    cellData = cellData[0] * cellData[1]
+            except Exception as e:
+                print("Something especially went wrong: "+str(e))
             
             if type(cellData) == str and row[col].row>1 and col in summingIndexes:
                 try:
@@ -428,6 +429,13 @@ for i in range(3):
     voltText = tk.Text(voltFrame, height = 1, width = 10)
     voltText.bind('<Tab>', tab_pressed)
     voltText.bind('<Return>', tab_pressed)
+    match i:
+        case 0:
+            voltText.insert(tk.END, "120")
+        case 1:
+            voltText.insert(tk.END, "208")
+        case 2:
+            voltText.insert(tk.END, "480")
     voltText.pack(padx=10, pady=10, side = tk.LEFT)
     voltEntries.append(voltText)
 
