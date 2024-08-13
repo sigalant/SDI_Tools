@@ -246,14 +246,16 @@ def writeSpecs(msgLabel):
     specDict = {}
     
     #Create doc and style
-    doc = d.Document()
-
+    doc = d.Document("V:\\Specs\\Specs Script\\Template Specs_Word Files\\Style_Template.docx")
+    
     doc_styles = doc.styles
+    '''
+    #Maybe use one of the existing styles here...
     header_style = doc_styles.add_style('Spec_Header', d.enum.style.WD_STYLE_TYPE.PARAGRAPH)
     header_font = header_style.font
     header_font.size = d.shared.Pt(10)
     header_font.name = 'Univers LT Std 55'
-
+    '''
     msgLabel.config(text="Working...")
 
     #Open Revit output
@@ -272,14 +274,11 @@ def writeSpecs(msgLabel):
     try:
         wbr = opx.load_workbook(excelFilepath, read_only=True)
     except:
-        #msgLabel.config(text="Warning: Spec Ref Sheet not found (Specs found manually)")
         print("The Excel File was not found... But that's OK")
         excelFilepath = ""
     headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
-    onlyfiles = [] #MAYBE NOT USEFUL ANYMORE
-    refSheet = None #I DONT THINK THIS IS USED IN THIS SCOPE
 
     #If there's a ref sheet, copy item information for later searching
     if excelFilepath:
@@ -298,9 +297,6 @@ def writeSpecs(msgLabel):
                     specRefs[4].append(False)
                 else:
                     specRefs[4].append(True)
-    #Otherwise collect all the file names (No longer useful w/ DB?)
-    else:
-        onlyfiles = [f for f in listdir("V:\\Specs\\Specs Script\\Template Specs_Word Files") if isfile(join("V:\\Specs\\Specs Script\\Template Specs_Word Files", f))]
     
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
