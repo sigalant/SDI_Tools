@@ -118,23 +118,23 @@ def formatFile(voltList):
             if "_x000D_" in str(cellData):
                 if col in summingIndexes:
 
-                    try:
-                        if '(' in str(cellData) and col == indexDict['AMPS']:
-                            cellData = (cellData.split("_x000D_"))
-                            for i in range(len(cellData)):
-                                if '(' in cellData[i]:
-                                    fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
-                                    cellData[i] = fList[0]*fList[1]
-                                else:
-                                    cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
-                        elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
-                            cellData = ' '.join(cellData.split("_x000D_"))
-                            cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
-                        else:
-                            cellData = ' '.join(cellData.split("_x000D_"))
+                    #try:
+                    if '(' in str(cellData) and col == indexDict['AMPS']:
+                        cellData = (cellData.split("_x000D_"))
+                        for i in range(len(cellData)):
+                            if '(' in cellData[i]:
+                                fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
+                                cellData[i] = fList[0]*fList[1]
+                            else:
+                                cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
+                    elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
+                        cellData = ' '.join(cellData.split("_x000D_"))
+                        cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                    else:
+                        cellData = ' '.join(cellData.split("_x000D_"))
                         cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
-                    except Exception as e:
-                        print("Something went wrong:" + str(e))
+                    #except Exception as e:
+                    #    print("Something went wrong:" + str(e))
                 else:
                     cellData = cellData.split("_x000D_")[0]
             try:
@@ -304,6 +304,14 @@ def formatFile(voltList):
             except Exception as e:
                 print(e)
         sheetNew.append(sheetData[row])
+        
+        #Alignments
+        try:
+            sheetNew[sheetNew.max_row][0].alignment = opx.styles.Alignment(horizontal='right')
+            sheetNew[sheetNew.max_row][1].alignment = opx.styles.Alignment(horizontal='center')
+        except Exception as e:
+            print(str(e))
+
         try:
             if float(sheetData[row][indexDict['VOLTS']]) not in voltList:
                 sheetNew[row+7][indexDict['VOLTS']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
