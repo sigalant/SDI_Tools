@@ -45,7 +45,8 @@ def parseSpecs(file):
 
 #Add new entry into DB
 def addEntry(info, cur):
-    
+    for i in range(len(info)):
+        info[i] = info[i].replace("'","''").replace('"','""')
     #Ignore if entry already exists
     query = ("SELECT doc FROM item WHERE doc='" +str(info[3]) +"'")
     #print(query)
@@ -55,12 +56,13 @@ def addEntry(info, cur):
     else:
         print("Adding Entry for " + info[0])
         #Add Entry
-        cur.execute("INSERT INTO item VALUES ('" + str(info[0]) + "','" + str(info[1]) + "','" + str(info[2]) + "','" + str(info[3])+ "')")
-
-        specText = parseSpecs(info[3])
+        q=("INSERT INTO item VALUES ('" + str(info[0]) + "','" + str(info[1]) + "','" + str(info[2]) + "','" + str(info[3])+ "')")
+        print(q)
+        cur.execute(q)
+        specText = parseSpecs(info[3].replace("''","'").replace('""','"'))
         specText = specText.replace("'", "''").replace('"','""')
         
-        query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\',\'"+str(os.path.getmtime(info[3]))+"\')")
+        query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\',\'"+str(os.path.getmtime(info[3].replace('""','"').replace("''","'")))+"\')")
         cur.execute(query2)
         #print(query2)
 

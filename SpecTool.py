@@ -59,7 +59,7 @@ def copySpecs(tempDocPath, p, highlight, cur):
         specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
     except:
         print("Specs not found for: " + tempDocPath)
-        return
+        return -1
     #Begin copying after header
     i = 0
     while i<len(specText) and "Utilities" not in specText[i]:
@@ -101,7 +101,7 @@ def ChooseSpec(chosenSpec, popup, tv):
         print("Make a Selection")
         return
     else:
-        chosenSpec.set("V:/Specs/Specs Script/Template Specs_Word Files/"+item['values'][2])
+        chosenSpec.set(item['values'][3])
         popup.destroy()
         
 
@@ -292,7 +292,7 @@ def writeSpecs(msgLabel):
                 specRefs[3].append("")
                 specRefs[4].append(False)
             else:
-                specRefs[3].append(str(row[3].value).split('\"')[3])
+                specRefs[3].append(str(row[3].value).split('\"')[1].replace('[','').replace(']',''))
                 if row[0].fill == yellowFill:
                     specRefs[4].append(False)
                 else:
@@ -364,7 +364,7 @@ def writeSpecs(msgLabel):
                 return
 
             #Check if not in contract
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower()):
+            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
                 run = run + " (NOT IN CONTRACT)"
         
             #Check if existing equipment
@@ -390,7 +390,7 @@ def writeSpecs(msgLabel):
                 run = run + str(row[headerIndexes[0]+1].value)
                 
             #If not in contract, add pert. data
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower()):
+            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
                 run = run+ ("\nPertinent Data:\t")
                 if(row[headerIndexes[0]+5].value == None):
                     run = run + add_run("---")
@@ -612,7 +612,7 @@ def writeSpecs(msgLabel):
                             top.geometry("800x400")
                             top.title("Select a Source Spec")
                             tk.Label(top,text="Multiple Specs Match the Following Item.\nDescription: "+ str(specData[0]) +"\nManufacturer: "+ str(specData[1]) +"\nModel No.: "+ str(specData[2]) +"\n\n\nPlease Choose Best Match").pack()
-                            columns=["Manufacturer","Model","Word Doc"]
+                            columns=["Manufacturer","Model","Word Doc","Path"]
                             treeview = ttk.Treeview(top, selectmode = 'browse', columns =columns)
                             treeview.pack()
                             matchedString = tk.StringVar(root, "")
@@ -623,9 +623,10 @@ def writeSpecs(msgLabel):
                             treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
                             treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
                             treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
-                            treeview.tag_bind('tag?', "<Double-1>", openFile)
+                            treeview.column('#4', stretch='no', minwidth=0, width=0, anchor=tk.E)
+                            treeview.tag_bind('tag?', "<Double-1>", lambda event, msg = msgLabel: openFile(event, msg))
                             for entry in matches:        
-                                t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"), tags=("tag?",)) 
+                                t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), str(entry[3]).split('/')[len(str(entry[3]).split('/'))-1],str(entry[3])), tags=("tag?",)) 
                             root.wait_window(top)
                             specDoc = matchedString.get()
                             specDict[str(specData[2])] = specDoc
@@ -649,16 +650,14 @@ def writeSpecs(msgLabel):
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                       and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
                     
-                    copySpecs("V:/Specs/Specs Script/Template Specs_Word Files/" + specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] + ".docx", doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                     
-                # If Manufacturer and Desc. match, copy and highlight specs
+                # If Manufacturer and Desc. match, copy specs
                 elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
                     manuf = ""
-                    highlight = False
-                    #Check if specs exist for matching Manufacturer and Desc., and turn on highlighting
+                    #Check if specs exist for matching Manufacturer and Desc.
                     if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
                         manuf = str(row[headerIndexes[0]+2].value).lower()
-                        highlight = True
                     #Check if specs for custom fabrication item exists
                     elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
                         manuf = "custom fabrication"
@@ -668,11 +667,10 @@ def writeSpecs(msgLabel):
                     #Find specs which match for given item
                     for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
                         if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: 
-                    
-                            #COPY AND PASTE FROM ASSOCIATED DOC
                             if(specRefs[3][index] == ""):
                                 continue
-                            copySpecs("V:/Specs/Specs Script/Template Specs_Word Files/" + specRefs[3][index] + ".docx", doc.add_paragraph('', style = 'Spec_Header'),highlight,cur)
+                            #Copy and paste from associated doc and highlighting from spec ref sheet
+                            copySpecs(specRefs[3][index], doc.add_paragraph('', style = 'Spec_Header'),not specRefs[4][index],cur)
                             break                           
     try:
         doc.save(outputFilepath+"/Specs.docx")
@@ -702,7 +700,7 @@ def getExcelFile(xlLabel):
     xlLabel.config(text= "The ref sheet location is: " + excelFilepath)
 
 #Search DB for anything that partially matches user input
-def Search(tv, text, cur, var):
+def Search(tv, text, cur, var, msg):
     fields = ["","","",""]
     match var.get():
         case "Model":
@@ -714,33 +712,40 @@ def Search(tv, text, cur, var):
         case _:
             print("How did you do that?????")
     if fields[0] or fields[1] or fields[2] or fields[3]:
-        found = db.FindEntry(fields, cur)
+        try:
+            found = db.FindEntry(fields, cur)
+            msg.config(text = "Search successful")
+        except:
+            print("This should probably be handled in the SpecDB.py file, but whatever")
+            msg.config(text = "Avoid using special characters")
+            return
         tv.delete(*tv.get_children())
         for item in found:
-            tv.insert("", tk.END, text = item[0], values = (item[1], item[2], item[0]+"_"+item[1]+"_"+item[2]+".docx"),tags = ("tag?",))
+            tv.insert("", tk.END, text = item[0], values = (item[1], item[2], item[3].split('/')[len(item[3].split('/'))-1], item[3]),tags = ("tag?",))
     else:
         tv.delete(*tv.get_children())
         entries = cur.execute("SELECT * FROM item").fetchall()
         for entry in entries:
-            tv.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[0]+"_"+entry[1]+"_"+entry[2]+".docx"),tags=("tag?",))
+            tv.insert("", tk.END, text = entry[0], values = (entry[1], entry[2], entry[3].split('/')[len(entry[3].split('/'))-1], entry[3]),tags=("tag?",))
 
-def ModifyEntry(con, tv, root):
+def ModifyEntry(con, tv, root, msg):
     cur = con.cursor()
     item = None
     try:
         item = tv.selection()[0]
     except:
-        print("No item selected")
+        msg.config(text="Please select an item")
         return
     
     itemInfo = tv.item(item)
 
     #popup with info for changes
     top=tk.Toplevel(root)
-    top.geometry("500x350")
+    top.geometry("500x400")
     top.title("Edit Spec")
 
     docPath=tk.StringVar(root,"")
+    docPath.set(itemInfo['values'][3])
 
     cornerBuffer = tk.Label(top)
     cornerBuffer.grid(row=0, column=0, padx=35, pady=10)
@@ -768,6 +773,9 @@ def ModifyEntry(con, tv, root):
     docPathLabel = tk.Label(top, text="Spec Doc is located at: " + docPath.get(), wraplength=200)
     docPathLabel.grid(row=6, column=1, columnspan=3, pady=10)
 
+    msgLabel = tk.Label(top,text="",wraplength=400)
+    msgLabel.grid(row=8,column=1,columnspan=3,padx=10,pady=10)
+
     def chooseDoc():
         docPath.set(filedialog.askopenfilename(filetypes = (("Microsoft Word Document", "*.docx"),)))
         top.lift()
@@ -776,24 +784,43 @@ def ModifyEntry(con, tv, root):
     docButton = tk.Button(top, text="Select Doc", command=chooseDoc)
     docButton.grid(row=5,column=3)
     ch = tk.StringVar(root, "")
+    res=tk.StringVar(root)
     def submit():
         changes = [descText.get('1.0', 'end-1c'), manuText.get('1.0', 'end-1c'), modelText.get('1.0', 'end-1c'), docPath.get()]
+        badChars = ['\\','/','|','?',':','*','<','>','"']
         ch.set(",".join(changes))
-        db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], "V:/Specs/Specs Script/Template Specs_Word Files/"+itemInfo["values"][2]], changes, cur)    
+        '''
+        if changes[3] != '' and 'V:/Specs/Specs Script/Template Specs_Word Files' not in changes[3]:
+            msgLabel.config(text="Please use a file in the location: V:/Specs/Specs Script/Template Specs_Word Files")
+            return
+        '''
+        if any(char in ','.join(changes[:3]) for char in badChars):
+            msgLabel.config(text="Warning: Cannot use the following characters: " + ','.join(badChars))
+            return
+        res.set(str(db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], itemInfo["values"][3]], changes, cur)))    
+        print(res.get())
         top.destroy()
 
     submitButton = tk.Button(top, text="Submit", command=submit)
     submitButton.grid(row=7,column=2, pady = 20)
 
     root.wait_window(top)
+    print(res.get())
+    if int(res.get()) <1:
+        msg.config(text="Couldn\'t update entry")
+        return
+    elif int(res.get()) > 1:
+        msg.config(text="Modified multiple entries")
+    else:
+        msg.config(text="Successfully Modified Entry")
     changes = ch.get().split(",")
     if len(changes) < 4:
         print("NO GO BRO")
         return
     con.commit()
-    print(ch.get())
+    
 #Edit Treeview
-    vals = ['','','']
+    vals = ['','','','']
     
     if changes[0]:
         desc = changes[0]
@@ -811,58 +838,81 @@ def ModifyEntry(con, tv, root):
         vals[1] = itemInfo['values'][1]
 
     if changes[3]:
-        vals[2] = changes[3]
+        vals[2] = changes[3].split('/')[len(changes[3].split('/'))-1]
+        vals[3] = changes[3]
     else:
         vals[2] = itemInfo['values'][2]
+        vals[3] = itemInfo['values'][3]
     print(vals[2] +":"+itemInfo['values'][2] + ":" + changes[3]) 
     tv.item(item, text=desc, values=vals)
     
-def AddEntry(con, tv):
+def AddEntry(con, tv, msg):
     cur = con.cursor()
+    missing = []
     for f in filedialog.askopenfilenames():
         splitfile = f.split('/')
         print(splitfile)
         splitfile = splitfile[len(splitfile)-1].split('_')
-        try:
-            db.addEntry([splitfile[0].strip(), splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), f], cur)
-            tv.insert('', tk.END, text =str(splitfile[0].strip()), values = (splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), '_'.join(splitfile)), tags=("tag?",))
-        except:
-            print("Not this one: " + f)
-        print(f)
+        if len(splitfile) < 3:
+            missing.append(f)
+            continue
+        
+        if db.addEntry([splitfile[0].strip(), splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), f], cur):
+            tv.insert('', tk.END, text =str(splitfile[0].strip()), values = (splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), '_'.join(splitfile), f), tags=("tag?",))
+        
+        #print(f)
+    if missing:
+        msg.config(text='Couldn\'t add specs for the following (doesn\'t follow naming convention):\n '+'\n'.join(missing))
+    else:
+        msg.config(text='Successfully added entry(s)')
     con.commit()
-    
+        
     
 #Temporary Placeholder Function
 def Nothing():
     pass
 
 #Remove entry from treeview and DB
-def DeleteEntry(con, tv):
+def DeleteEntry(con, tv, msg):
     cur = con.cursor()
     try:
         item = tv.selection()[0]
     except:
-        print("No item selected")
+        msg.config(text="No item selected")
         return
     itemInfo = tv.item(item)
     tv.delete(item)
-    
-    print(item)
-    db.DeleteEntry('V:/Specs/Specs Script/Template Specs_Word Files/'+itemInfo['values'][2], cur)
+    print(itemInfo)
+    res = db.DeleteEntry(itemInfo['values'][3], cur)
+    print(res)
+    if res[0] >1 or res[1]>1:
+        msg.config(text = "Deleted Multiple Entries with doc: " + itemInfo['values'][3])
+    elif res[0] and res[1]:  
+        msg.config(text = "Successfully Deleted Entry")
+    else:
+        msg.config(text="Couldn't find entry: " + itemInfo['values'][3])
     con.commit()
-    print("Deleted: " + str(itemInfo['values']))
+    #print("Deleted: " + str(itemInfo['values']))
     
 #Update all out-of-date specs with changes in Doc file
-def UpdateSpecs(con):
+def UpdateSpecs(con,msg):
     cur = con.cursor()
-    db.UpdateSpecs(cur)
+    missing = db.UpdateSpecs(cur)
+    print(missing)
+    if missing:
+        msg.config(text="Couldn\'t find the following files: " + "\n".join(missing))
+    else:
+        msg.config(text="Successfully updated specs")
     con.commit()
     
 #Open file from treeview
-def openFile(event):
+def openFile(event, msg):
     tree=event.widget
     item = tree.item(tree.focus())
-    os.startfile('V:\\Specs\\Specs Script\\Template Specs_Word Files\\'+item['values'][2])
+    try:
+        os.startfile(item['values'][3])
+    except:
+        msg.config(text="This file doesn't exist here anymore...")
 
 #Sort treeview based on selected column
 def treeview_sort_column(tv, col, reverse):
@@ -900,40 +950,45 @@ def DBWindow():
     
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
+
+    messageBox = tk.Label(root, text = "")
+    messageBox.grid(row=6,column=2, columnspan=4 ,pady=10,padx=10)
     
-    columns = ("Manufacturer", "Model", "Word Doc")
+    columns = ("Manufacturer", "Model", "Word Doc", "Path")
     treeview = ttk.Treeview(root, selectmode = 'browse', columns =columns)
     treeview.heading("#0", text="Description", command=lambda: treeview_sort_column(treeview, '#0', True))
     treeview.heading("Manufacturer", text="Manufacturer",command=lambda: treeview_sort_column(treeview, columns[0], True))
     treeview.heading("Model", text="Model",command=lambda: treeview_sort_column(treeview, columns[1], True))
     treeview.heading("Word Doc", text="Word Doc",command=lambda: treeview_sort_column(treeview, columns[2], True))
-    treeview.tag_bind('tag?', "<Double-1>", openFile)
+    treeview.column('#4', stretch='no', minwidth=0, width=0, anchor=tk.E)
+    treeview.tag_bind('tag?', "<Double-1>", lambda event, msg=messageBox:openFile(event, msg))
 
     con = sqlite3.connect("specsDB.db")
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()
 
     for entry in entries:        
-        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[3].split("/")[len(entry[3].split("/"))-1]), tags=("tag?",))
+        t= treeview.insert('', tk.END, text =str(entry[0]), values = (str(entry[1]), str(entry[2]), entry[3].split("/")[len(entry[3].split("/"))-1], entry[3]), tags=("tag?",))
 
     scrollBar = ttk.Scrollbar(root, orient="vertical", command = treeview.yview)
     scrollBar.grid(row=2,column=6,rowspan=4, sticky='ns')
     treeview.grid(row=2,column=2, rowspan=4, columnspan=4)
     treeview.configure(yscrollcommand =scrollBar.set)
+
     
 
-    add = tk.Button(root, text= "Add Entry", command=lambda:AddEntry(con,treeview))
+    add = tk.Button(root, text= "Add Entry", command=lambda:AddEntry(con,treeview,messageBox))
     add.grid(row=2, column=1, padx = 20)
 
-    modify = tk.Button(root, text = "Modify Entry", command=lambda:ModifyEntry(con, treeview, root))
+    modify = tk.Button(root, text = "Modify Entry", command=lambda:ModifyEntry(con, treeview, root, messageBox))
     modify.grid(row=3, column=1, padx = 20)
 
-    delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview))
+    delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview, messageBox))
     delete.grid(row=4, column=1, padx = 20)
 
-    update = tk.Button(root, text = "Update Entries", command=lambda:UpdateSpecs(con))
+    update = tk.Button(root, text = "Update Entries", command=lambda:UpdateSpecs(con, messageBox))
     update.grid(row=5, column=1, padx = 20)
-
+    
     searchFrame = tk.Frame(root)
     searchFrame.grid(row=1, column=2, columnspan=4, pady=20)
 
@@ -952,11 +1007,13 @@ def DBWindow():
 
     drop = tk.OptionMenu(searchFrame, var, *options)
     drop.grid(row=0, column=3)
-
-    submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var))
+    
+    submit = tk.Button(searchFrame, text="Search", command=lambda:Search(treeview, T.get("1.0", 'end-1c'), cur, var, messageBox))
     submit.grid(row=0, column=4, columnspan=2, padx = 20, pady=20)
-
-    #add error message box here!
+    def SearchEvent(event, tree, text,cur,var,msg):
+        Search(tree,text,cur,var,msg)
+        return "break"
+    T.bind('<Return>', lambda event:SearchEvent(event, treeview, T.get("1.0",'end-1c'), cur, var, messageBox))
 
 #Create Window for Writing Specs Function
 def wsWindow():

@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 956, in <lambda>
+    delete = tk.Button(root, text = "Delete Entry", command=lambda:DeleteEntry(con, treeview, messageBox))
+                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 869, in DeleteEntry
+    if res[0] and res[1]:
+       ~~~^^^
+TypeError: 'NoneType' object is not subscriptable
