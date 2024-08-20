@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 26, in <module>
+    menubar.add_command(label="Help", command= os.startfile('Help.html'))
+                                               ^^
+NameError: name 'os' is not defined. Did you forget to import 'os'

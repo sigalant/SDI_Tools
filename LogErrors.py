@@ -8,6 +8,7 @@ def handle_exception(exc_type,exc_value,exc_traceback):
         print("Nice CTRL-C, Nerd!")
         return
     filename, line, dummy, dummy = traceback.extract_tb(exc_traceback).pop()
+
     filename=os.path.basename(filename)
     error = "%s: %s" % (exc_type.__name__,exc_value)
     print("Closed due to an error. This is the full error report:")
