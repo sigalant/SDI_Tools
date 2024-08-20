@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 36, in <module>
+    menubar = Menu()
+              ^^^^
+NameError: name 'Menu' is not defined

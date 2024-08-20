@@ -33,6 +33,10 @@ root = tk.Tk()
 root.title("SDI Specs Formatting Tool")
 root.geometry("800x500")
 
+menubar = tk.Menu()
+menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+root.config(menu=menubar)
+
 #Catch unhandled errors and report them
 def handle_exception(exc,val,tb):
     top=tk.Toplevel(root)
@@ -784,7 +788,7 @@ def ModifyEntry(con, tv, root, msg):
     docButton = tk.Button(top, text="Select Doc", command=chooseDoc)
     docButton.grid(row=5,column=3)
     ch = tk.StringVar(root, "")
-    res=tk.StringVar(root)
+    res=tk.StringVar(root, "0")
     def submit():
         changes = [descText.get('1.0', 'end-1c'), manuText.get('1.0', 'end-1c'), modelText.get('1.0', 'end-1c'), docPath.get()]
         badChars = ['\\','/','|','?',':','*','<','>','"']
@@ -932,6 +936,11 @@ def selectionWindow():
         widget.destroy()
     root.geometry("800x500")
 
+    menubar = tk.Menu()
+    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    root.config(menu=menubar)
+        
+
     frame = tk.Frame(root)
     frame.pack()
     
@@ -947,6 +956,9 @@ def DBWindow():
         widget.destroy()
         
     root.geometry("1100x500")
+    menubar = tk.Menu()
+    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    root.config(menu=menubar)
     
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
@@ -1019,6 +1031,10 @@ def DBWindow():
 def wsWindow():
     for widget in root.winfo_children():
         widget.destroy()
+
+    menubar = tk.Menu()
+    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    root.config(menu=menubar)
         
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
