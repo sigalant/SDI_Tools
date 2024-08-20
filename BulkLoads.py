@@ -8,7 +8,7 @@ import traceback
 from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
+import os
 #sys.excepthook = LogErrors.handle_exception
 
 #Holds I/O filepaths
@@ -21,6 +21,10 @@ root = tk.Tk()
 
 root.title("SDI Bulk Loads Formatting Tool")
 root.geometry("800x450")
+
+menubar = tk.Menu()
+menubar.add_command(label="Help", command= lambda:os.startfile('Help.html'))
+root.config(menu=menubar)
 
 #Opens popup window with traceback if unhandled exception
 def handle_exception(exc,val,tb):
