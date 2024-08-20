@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 import sys
 import traceback
 import LogErrors
+import os
 
 inputFilepath = ""
 outputFilepath = ""
@@ -24,6 +25,10 @@ root.geometry("800x500")
 ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
+
+menubar = tk.Menu()
+menubar.add_command(label="Help", command=lambda:os.startfile('Help.html'))
+root.config(menu=menubar)
 
 #Opens popup window with traceback of unhandled exceptions in tkinter window  
 def handle_exception(exc,val,tb):
