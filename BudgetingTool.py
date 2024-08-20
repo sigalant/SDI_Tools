@@ -156,19 +156,20 @@ def formatFile():
         g = int(row[0].fill.start_color.index[4:6], 16)  # Green
         b = int(row[0].fill.start_color.index[6:8], 16)  # Blue
         
+
+        #Skip first row and non-white rows
         if row[0].value == "ItemNo" or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16)):
             print(str(row[0].fill.start_color.index) + ":" + str(row[0].row))
             continue
         for item in filterList:
+            #Add each header value for each item. If header not found, add empty value
             try:
                 assert (item != 0)
                 rowData.append(row[item-1].value)
             except Exception:
                 rowData.append("")
-        '''
-        if rowData[7] != None: and rowData[7].lower() == "ft".lower():
-            rowData[1] = 1
-        '''
+
+        #Remove Cost and Qty of SpareNo items
         if rowData[2] != None: 
             rowData[2] = rowData[2].upper()
             if rowData[2] == "SPARENO":
@@ -273,6 +274,8 @@ def formatFile():
     for i in range(len(data)):
         
         if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
+            
+            #If there isn't title, use the first location header as a title
             if sheetNew['A2'].value == "":
                 sheetNew['A2'] = data[i][5]
                 continue
