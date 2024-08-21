@@ -171,7 +171,7 @@ def formatFile():
 
         #Remove Cost and Qty of SpareNo items
         if rowData[2] != None: 
-            rowData[2] = rowData[2].upper()
+            rowData[2] = str(rowData[2]).upper()
             if rowData[2] == "SPARENO":
                 rowData[2] = 'SpareNo'
                 rowData[1] = '-'
@@ -273,7 +273,7 @@ def formatFile():
     #Copy previously collected data to a new XL sheet
     for i in range(len(data)):
         
-        if data[i][5] != None and data[i][5] == data[i][5].upper() and data[i][0] == None:
+        if data[i][5] != None and data[i][5] == str(data[i][5]).upper() and data[i][0] == None:
             
             #If there isn't title, use the first location header as a title
             if sheetNew['A2'].value == "":
@@ -302,7 +302,7 @@ def formatFile():
                 errorShown = True
 
             sheetNew[("A"+str(rowNum))] = data[i][0]
-            if data[i][7] != None and data[i][7].lower() == 'ft':
+            if data[i][7] != None and str(data[i][7]).lower() == 'ft':
                 sheetNew[("B"+str(rowNum))] = 1
             else:
                 sheetNew[("B"+str(rowNum))] = data[i][1]
@@ -315,7 +315,7 @@ def formatFile():
                 sheetNew[("F"+str(rowNum))] = float(data[i][3])*float(data[i][1])
             except Exception:
                 sheetNew[("F"+str(rowNum))] = data[i][3]
-            if (data[i][7] != None and 'ft' in data[i][7].lower()) or (data[i][4] != None and 'custom fab' in data[i][4].lower()):
+            if (data[i][7] != None and 'ft' in str(data[i][7]).lower()) or (data[i][4] != None and 'custom fab' in str(data[i][4]).lower()):
                 sheetNew['F'+str(rowNum)] = data[i][8]
             sheetNew["F"+str(rowNum)].number_format = "$#,##0.00"
             sheetNew[("H"+str(rowNum))] = data[i][4]
@@ -340,7 +340,10 @@ def formatFile():
 
     sheetNew[("F" + str(rowNum+1))] = "=SUM(F6:F" + str(rowNum) + ")"
     sheetNew['F'+str(rowNum+1)].number_format = '$#,##0.00'
-    sheetNew[("F" + str(rowNum+2))] = "=F" + str(rowNum+1) +"*"+ str(float(spinbox.get().split()[0])/100.0)
+    try:
+        sheetNew[("F" + str(rowNum+2))] = "=F" + str(rowNum+1) +"*"+ str(float(spinbox.get().split()[0])/100.0)
+    except:
+        sheetNew[("F"+str(rowNum+2))] = "=F"+str(rowNum+1) +"*"+str(float(18.0/100.0))
     sheetNew['F'+str(rowNum+2)].number_format = '$#,##0.00'
     sheetNew[("F" + str(rowNum+3))] = "=SUM(F" + str(rowNum+1) + ":F" + str(rowNum+2) + ")"
     sheetNew['F'+str(rowNum+3)].number_format = '$#,##0.00'
