@@ -307,6 +307,7 @@ def formatFile(voltList):
                 sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"       
             except Exception as e:
                 print(e)
+        print(sheetData[row])
         sheetNew.append(sheetData[row])
         
         #Alignments
