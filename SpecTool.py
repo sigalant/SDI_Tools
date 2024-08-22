@@ -86,16 +86,19 @@ def copySpecs(tempDocPath, p, highlight, cur):
                 p.add_run(specText[j])
         #Colored Section 
         else:
-            #Parse Font Color into RGB color components
-            r=int(specText[j+1][:2], 16)
-            g=int(specText[j+1][2:4],16)
-            b=int(specText[j+1][4:6],16)
-            
             colorRun = p.add_run(specText[j])
-            colorRun.font.color.rgb = d.shared.RGBColor(r,g,b)
+            try:
+                #Parse Font Color into RGB color components            
+                r=int(specText[j+1][:2], 16)
+                g=int(specText[j+1][2:4],16)
+                b=int(specText[j+1][4:6],16)
+                colorRun.font.color.rgb = d.shared.RGBColor(r,g,b)
+                j = j+1
+            except:
+                pass
             if highlight:
                 colorRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-            j= j+1
+            #j= j+1
         j=j+1
 
 #Get selected item from treeview and copy filepath (into chosenSpec) then destroy popup window
@@ -170,13 +173,13 @@ def findSpecs(msgLabel):
 
         #Test that "might" catch wrong input files
         try:
-            nothing = row[1].value == None or "spare" in row[4].value.lower()
+            nothing = row[1].value == None or "spare" in str(row[4].value).lower()
         except:
             msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
             return
         
         #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
-        if row[1].value == None or "spare" in row[4].value.lower() or (row[5].value != None and ("by" in row[5].value.lower() or "exist" in row[5].value.lower())):
+        if row[1].value == None or "spare" in str(row[4].value).lower() or (row[5].value != None and ("by" in str(row[5].value).lower() or "exist" in str(row[5].value).lower())):
             continue
 
         #Collect Name, Manufacturer, and Model No. for finding/matching a Spec ".docx" file
@@ -184,7 +187,7 @@ def findSpecs(msgLabel):
             ambiguousModels = ["custom", "custom design"]#Non-Unique Model No's
             specData = []
             #Manually fill field for custom fab
-            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
+            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value):
                 specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
             #or Fill fields with Excel values
             else:
@@ -231,7 +234,7 @@ def findSpecs(msgLabel):
                 else:
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = redFill
-            
+    wb.close()
     #Save new Specs Worksheet
     try:
         wbNew.save(outputFilepath+"\\SpecRefSheet.xlsx")
@@ -296,10 +299,15 @@ def writeSpecs(msgLabel):
                 specRefs[3].append("")
                 specRefs[4].append(False)
             else:
-                specRefs[3].append(str(row[3].value).split('\"')[1].replace('[','').replace(']',''))
+                try:
+                    specRefs[3].append(str(row[3].value).split('\"')[1].replace('[','').replace(']',''))
+                except:
+                    specRefs[3].append("Broken Hyperlink :(")
                 if row[0].fill == yellowFill:
+                    print("False")
                     specRefs[4].append(False)
                 else:
+                    print("True")
                     specRefs[4].append(True)
     
     #Iterate every row in Revit output sheet
@@ -362,13 +370,13 @@ def writeSpecs(msgLabel):
             #Maybe catches incorrect file related errors
             try:
                 row[headerIndexes[0]+5].value != None
-                "SPARE NUMBER" in row[headerIndexes[0]+4].value
+                "SPARE NUMBER" in str(row[headerIndexes[0]+4].value)
             except:
                 msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
                 return
 
             #Check if not in contract
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
+            if row[headerIndexes[0]+5].value != None and ("by vendor" in str(row[headerIndexes[0]+5].value).lower() or "by os&e" in str(row[headerIndexes[0]+5].value).lower() or "by general contractor" in str(row[headerIndexes[0]+5].value).lower() or "by owner" in str(row[headerIndexes[0]+5].value).lower()):
                 run = run + " (NOT IN CONTRACT)"
         
             #Check if existing equipment
@@ -382,7 +390,7 @@ def writeSpecs(msgLabel):
                 r.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
         
             #Skip rest if Spare Number
-            if "SPARE NUMBER" in row[headerIndexes[0]+4].value:
+            if "SPARE NUMBER" in str(row[headerIndexes[0]+4].value):
                 p.add_run(run)
                 continue
 
@@ -394,7 +402,7 @@ def writeSpecs(msgLabel):
                 run = run + str(row[headerIndexes[0]+1].value)
                 
             #If not in contract, add pert. data
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
+            if type(row[headerIndexes[0]+5].value) == str and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
                 run = run+ ("\nPertinent Data:\t")
                 if(row[headerIndexes[0]+5].value == None):
                     run = run + add_run("---")
@@ -409,7 +417,7 @@ def writeSpecs(msgLabel):
             customFab = False
             
             #Check if custom fab
-            if(row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
+            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
                 run = run + "Custom Fabrication"
                 customFab=True
             else:
@@ -430,7 +438,7 @@ def writeSpecs(msgLabel):
             run = run + ("\nPertinent Data:\t")
         
             #Remove "Custom Fabrication" from pert. data
-            if(row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
+            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
                 temp = "".join(row[headerIndexes[0]+5].value.split("CUSTOM FABRICATION"))
                 if ", " in temp:
                     run = run + temp[2:]
@@ -453,9 +461,9 @@ def writeSpecs(msgLabel):
         
                 #Electrical
             if(row[headerIndexes[3]+3].value != None):
-                a=row[headerIndexes[3]+3].value.split("_x000D_\n")
-                v=row[headerIndexes[3]+4].value.split("_x000D_\n")
-                ph=row[headerIndexes[3]+5].value.split("_x000D_\n")
+                a=str(row[headerIndexes[3]+3].value).split("_x000D_\n")
+                v=str(row[headerIndexes[3]+4].value).split("_x000D_\n")
+                ph=str(row[headerIndexes[3]+5].value).split("_x000D_\n")
                 c=None
                 if(row[headerIndexes[3]+6].value != None):
                     c=str(row[headerIndexes[3]+6].value).split("_x000D_\n")
@@ -484,7 +492,7 @@ def writeSpecs(msgLabel):
                 if type(row[headerIndexes[1]+3].value) == int:
                     cfm.append(str(row[headerIndexes[1]+3].value)+ " CFM Exhaust")
                 else:
-                    values = row[headerIndexes[1]+3].value.split()
+                    values = str(row[headerIndexes[1]+3].value).split()
                     for value in values:
                         cfm.append(value[:4] + " CFM Exhaust")
 
@@ -588,12 +596,12 @@ def writeSpecs(msgLabel):
                 cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
-                if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
+                if type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
                     specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
                 #Fill fields with Excel values
                 else:
                     specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
-
+                
                 matches = []
                 if specData[1] == "Custom Fabrication":
                     matches = cur.execute("SELECT * FROM item WHERE desc='" + str(specData[0]).replace("'","''").replace('"','""') + "' COLLATE NOCASE AND manu = 'Custom Fabrication' COLLATE NOCASE").fetchall()
@@ -653,11 +661,11 @@ def writeSpecs(msgLabel):
                 #if specs exist, copy and paste    
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                       and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
-                    
+                    print("An Exact Match")
                     copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                     
                 # If Manufacturer and Desc. match, copy specs
-                elif (row[headerIndexes[0]+4].value != None and row[headerIndexes[0]+4].value.lower() in specRefs[0]):
+                elif (row[headerIndexes[0]+4].value != None and str(row[headerIndexes[0]+4].value).lower() in specRefs[0]):
                     manuf = ""
                     #Check if specs exist for matching Manufacturer and Desc.
                     if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
@@ -670,12 +678,13 @@ def writeSpecs(msgLabel):
                         continue
                     #Find specs which match for given item
                     for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
-                        if index in [j for j,s in enumerate(specRefs[0]) if s == row[headerIndexes[0]+4].value.lower()]: 
+                        if index in [j for j,s in enumerate(specRefs[0]) if s == str(row[headerIndexes[0]+4].value).lower()]: 
                             if(specRefs[3][index] == ""):
                                 continue
                             #Copy and paste from associated doc and highlighting from spec ref sheet
                             copySpecs(specRefs[3][index], doc.add_paragraph('', style = 'Spec_Header'),not specRefs[4][index],cur)
                             break                           
+    wb.close()
     try:
         doc.save(outputFilepath+"/Specs.docx")
     except:
@@ -791,15 +800,18 @@ def ModifyEntry(con, tv, root, msg):
     res=tk.StringVar(root, "0")
     def submit():
         changes = [descText.get('1.0', 'end-1c'), manuText.get('1.0', 'end-1c'), modelText.get('1.0', 'end-1c'), docPath.get()]
-        badChars = ['\\','/','|','?',':','*','<','>','"']
+        badChars = ['\\','/','|','?',':','*','<','>','"',"'",',']
         ch.set(",".join(changes))
         '''
         if changes[3] != '' and 'V:/Specs/Specs Script/Template Specs_Word Files' not in changes[3]:
             msgLabel.config(text="Please use a file in the location: V:/Specs/Specs Script/Template Specs_Word Files")
             return
         '''
-        if any(char in ','.join(changes[:3]) for char in badChars):
+        if any(char in ' '.join(changes[:3]) for char in badChars):
             msgLabel.config(text="Warning: Cannot use the following characters: " + ','.join(badChars))
+            return
+        if any(char in changes[3] for char in ('"',"'",',')):
+            msgLabel.config(text="Warning: Cannot open Doc file due to special characters in the name.")
             return
         res.set(str(db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], itemInfo["values"][3]], changes, cur)))    
         print(res.get())
@@ -854,6 +866,9 @@ def AddEntry(con, tv, msg):
     cur = con.cursor()
     missing = []
     for f in filedialog.askopenfilenames():
+        if any(char in f for char in ('"',"'",',')):
+            missing.append(f)
+            continue
         splitfile = f.split('/')
         print(splitfile)
         splitfile = splitfile[len(splitfile)-1].split('_')
@@ -936,8 +951,12 @@ def selectionWindow():
         widget.destroy()
     root.geometry("800x500")
 
-    menubar = tk.Menu()
-    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    #Help Menu
+    menubar = tk.Menu(root)
+    helpMenu = tk.Menu(menubar, tearoff=0)
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    menubar.add_cascade(label="Help",menu=helpMenu)
     root.config(menu=menubar)
         
 
@@ -956,10 +975,15 @@ def DBWindow():
         widget.destroy()
         
     root.geometry("1100x500")
-    menubar = tk.Menu()
-    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+   
+
+    menubar = tk.Menu(root)
+    helpMenu = tk.Menu(menubar, tearoff=0)
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    menubar.add_cascade(label="Help",menu=helpMenu)
     root.config(menu=menubar)
-    
+
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
 
@@ -1032,10 +1056,13 @@ def wsWindow():
     for widget in root.winfo_children():
         widget.destroy()
 
-    menubar = tk.Menu()
-    menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
-    root.config(menu=menubar)
         
+    menubar = tk.Menu(root)
+    helpMenu = tk.Menu(menubar, tearoff=0)
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    menubar.add_cascade(label="Help",menu=helpMenu)
+    root.config(menu=menubar)
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
 
