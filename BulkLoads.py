@@ -22,8 +22,11 @@ root = tk.Tk()
 root.title("SDI Bulk Loads Formatting Tool")
 root.geometry("800x450")
 
-menubar = tk.Menu()
-menubar.add_command(label="Help", command= lambda:os.startfile('Help.html'))
+menubar = tk.Menu(root)
+helpMenu = tk.Menu(menubar, tearoff=0)
+helpMenu.add_command(label="Help", command = lambda:os.startfile('Help.html'))
+helpMenu.add_command(label="Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir='./Example Files')))
+menubar.add_cascade(label="Help", menu=helpMenu)
 root.config(menu=menubar)
 
 #Opens popup window with traceback if unhandled exception
