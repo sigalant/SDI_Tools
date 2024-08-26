@@ -17,6 +17,8 @@ import tkinter as tk
 from tkinter import filedialog,ttk
 from PIL import Image, ImageTk
 
+import time 
+
 import os
 from os import listdir
 from os.path import isfile, join
@@ -54,7 +56,8 @@ try:
     photo = ImageTk.PhotoImage(ico)
     root.wm_iconphoto(False, photo)
 except:
-    print("SDI Logo not found at: V:\\Specs\\Specs Script\\SDI Logo.jpg")
+    pass
+    #print("SDI Logo not found at: V:\\Specs\\Specs Script\\SDI Logo.jpg")
 
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
@@ -62,7 +65,7 @@ def copySpecs(tempDocPath, p, highlight, cur):
     try:
         specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
     except:
-        print("Specs not found for: " + tempDocPath)
+        #print("Specs not found for: " + tempDocPath)
         return -1
     #Begin copying after header
     i = 0
@@ -246,10 +249,16 @@ def findSpecs(msgLabel):
         return
     msgLabel.config(text="Successfully Created Spec Ref Sheet")
         
-def writeSpecs(msgLabel):
-
+def writeSpecs(msgLabel, units):
+    start_time = time.time()
+    
     global excelFilepath
-
+    metric = False
+    if units == "Metric":
+        metric = True
+    else:
+        metric = False
+    
     specDict = {}
     
     #Create doc and style
@@ -304,10 +313,10 @@ def writeSpecs(msgLabel):
                 except:
                     specRefs[3].append("Broken Hyperlink :(")
                 if row[0].fill == yellowFill:
-                    print("False")
+                    #print("False")
                     specRefs[4].append(False)
                 else:
-                    print("True")
+                    #print("True")
                     specRefs[4].append(True)
     
     #Iterate every row in Revit output sheet
@@ -376,7 +385,7 @@ def writeSpecs(msgLabel):
                 return
 
             #Check if not in contract
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in str(row[headerIndexes[0]+5].value).lower() or "by os&e" in str(row[headerIndexes[0]+5].value).lower() or "by general contractor" in str(row[headerIndexes[0]+5].value).lower() or "by owner" in str(row[headerIndexes[0]+5].value).lower()):
+            if row[headerIndexes[0]+5].value != None and ("by vendor" in str(row[headerIndexes[0]+5].value).lower() or "by os&e" in str(row[headerIndexes[0]+5].value).lower() or "by general contractor" in str(row[headerIndexes[0]+5].value).lower() or "by owner" in str(row[headerIndexes[0]+5].value).lower() or "by mep" in str(row[headerIndexes[0]+5].value).lower()):
                 run = run + " (NOT IN CONTRACT)"
         
             #Check if existing equipment
@@ -402,7 +411,7 @@ def writeSpecs(msgLabel):
                 run = run + str(row[headerIndexes[0]+1].value)
                 
             #If not in contract, add pert. data
-            if type(row[headerIndexes[0]+5].value) == str and ("by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
+            if type(row[headerIndexes[0]+5].value) == str and ("by mep" in row[headerIndexes[0]+5].value.lower() or "by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
                 run = run+ ("\nPertinent Data:\t")
                 if(row[headerIndexes[0]+5].value == None):
                     run = run + add_run("---")
@@ -439,11 +448,12 @@ def writeSpecs(msgLabel):
         
             #Remove "Custom Fabrication" from pert. data
             if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
-                temp = "".join(row[headerIndexes[0]+5].value.split("CUSTOM FABRICATION"))
-                if ", " in temp:
-                    run = run + temp[2:]
-                else:
-                    run = run + "---"
+                temp = "See Plans, Drawing #___ "+"".join(row[headerIndexes[0]+5].value.split("CUSTOM FABRICATION"))
+                run = run + temp
+                #if ", " in temp:
+                #    run = run + temp[2:]
+                #else:
+                #    run = run + "---"
             else:
                 if(row[headerIndexes[0]+5].value == None):
                     run = run + ("---")
@@ -456,7 +466,10 @@ def writeSpecs(msgLabel):
 
                 #Plumbing    
             if(row[headerIndexes[2]+9].value != None and str(row[headerIndexes[2]+9].value)[0] == "-" and row[headerIndexes[2]+4].value == None):
-                run = run + (str(row[headerIndexes[2]+8].value) + " drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
+                if metric and ("mm" not in str(row[headerIndexes[2]+8].value)):
+                    run = run + (str(row[headerIndexes[2]+8].value) + "mm drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
+                else:
+                    run = run + (str(row[headerIndexes[2]+8].value) + " drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
                 is_empty = False
         
                 #Electrical
@@ -489,17 +502,29 @@ def writeSpecs(msgLabel):
             cfm = [] 
 
             if row[headerIndexes[1]+3].value != None:
-                if type(row[headerIndexes[1]+3].value) == int:
-                    cfm.append(str(row[headerIndexes[1]+3].value)+ " CFM Exhaust")
+                if metric:
+                    unit = " M^3/H"
                 else:
-                    values = str(row[headerIndexes[1]+3].value).split()
-                    for value in values:
-                        cfm.append(value[:4] + " CFM Exhaust")
+                    unit = " CFM"
+                if type(row[headerIndexes[1]+3].value) == int:
+                    cfm.append(str(row[headerIndexes[1]+3].value)+ unit + " Exhaust")
+                else:
+                    values = str("".join(str(row[headerIndexes[1]+3].value).split("_x000D_"))).split()
+                    print(values)
+                    if values.count(values[0]) == len(values):
+                        cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Exhaust")
+                    else:
+                        for value in values:
+                            cfm.append(value[:4] + unit +" Exhaust")
 
             if type(row[headerIndexes[1]+6].value) == str:
-                values = row[headerIndexes[1]+6].value.split()
-                for value in values:
-                    cfm.append(value[:4] + " CFM Supply")
+                values = str("".join(str(row[headerIndexes[1]+3].value).split("_x000D_"))).split()
+                print(values)
+                if values.count(values[0]) == len(values):
+                    cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Supply")
+                else:
+                    for value in values:
+                        cfm.append(value[:4] + unit +" Supply")
         
             if cfm:
                 if not is_empty:
@@ -512,15 +537,34 @@ def writeSpecs(msgLabel):
                 #Plumbing (but more)   
                 #Water
             if row[headerIndexes[2]+4].value != None:
-                tempList.append(str(row[headerIndexes[2]+4].value) + " CW")
+                if("_x000D_" in str(row[headerIndexes[2]+4].value)):
+                    temp = row[headerIndexes[2]+4].value.split("_x000D_")
+                    if "\n" in "".join(temp):
+                        temp = "".join(temp).split("\n")
+                    print(temp)
+                    if temp.count(temp[0]) == len(temp):
+                        tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + " CW")
+                    else:
+                        tempList.append(", ".join(temp) + " CW")
+                else:
+                    tempList.append(str(row[headerIndexes[2]+4].value) + " CW")
             if row[headerIndexes[2]+5].value != None:
-                tempList.append(str(row[headerIndexes[2]+5].value) + " HW")
+                if metric and "mm" not in str(row[headerIndexes[2]+5].value):
+                    tempList.append(str(row[headerIndexes[2]+5].value) + "mm HW")
+                else:
+                    tempList.append(str(row[headerIndexes[2]+5].value) + " HW")
         
                 #Waste
             if row[headerIndexes[2]+7].value != None:
-                tempList.append(str(row[headerIndexes[2]+7].value) + " IW")
+                if metric and "mm" not in str(row[headerIndexes[2]+7].value)
+                    tempList.append(str(row[headerIndexes[2]+7].value) + "mm IW")
+                else:
+                    tempList.append(str(row[headerIndexes[2]+7].value) + " IW")
             if row[headerIndexes[2]+8].value != None and tempList:
-                tempList.append(str(row[headerIndexes[2]+8].value) + " DW")
+                if metric and "mm" not in str(row[headerIndexes[2]+8].value):
+                    tempList.append(str(row[headerIndexes[2]+8].value) + "mm DW")
+                else:
+                    tempList.append(str(row[headerIndexes[2]+8].value) + " DW")
             
 
             if not is_empty and tempList:
@@ -535,7 +579,12 @@ def writeSpecs(msgLabel):
             if row[headerIndexes[2]+11].value != None:
                 if not is_empty:
                     run = run + "; "
-                run = run + str(row[headerIndexes[2]+11].value) + " Gas @ " + str(row[headerIndexes[2]+12].value) + " BTU; " + str(row[headerIndexes[2]+13].value) + " WC"
+                if metric:
+                    run = run + str(row[headerIndexes[2]+11].value) + "mm LP Gas @ " + str(row[headerIndexes[2]+12].value) + " KW "
+                    if row[headerIndexes[2]+13].value != None:
+                        run = run + "; "+ str(row[headerIndexes[2]+13].value) + " mbar"
+                else:
+                    run = run + str(row[headerIndexes[2]+11].value) + " Gas @ " + str(row[headerIndexes[2]+12].value) + " BTU; " + str(row[headerIndexes[2]+13].value) + " WC"
                 is_empty = False
     
                 #Chilled Water
@@ -544,7 +593,10 @@ def writeSpecs(msgLabel):
                     run = run + "; "
                 else:
                     is_empty = False
-                run = run + str(row[headerIndexes[2]+15].value) + " Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + " Chilled Water Return"
+                if metric and mm not in str(row[headerIndexes[2]+15].value):
+                    run = run + str(row[headerIndexes[2]+15].value) + "mm Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + "mm Chilled Water Return"
+                else:
+                    run = run + str(row[headerIndexes[2]+15].value) + " Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + " Chilled Water Return"
 
         
             if is_empty:
@@ -613,11 +665,11 @@ def writeSpecs(msgLabel):
                     #If there were multiple matches, offer user to choose the best match
                     
                     if len(matches) > 1:
-                        print(matches)
+                        #print(matches)
                         try:
                             #Try using dictionary to make decision
                             specDoc = specDict[str(specData[2])]
-                            print(specDict)
+                            #print(specDict)
                         except:
                             #Have user make a decision and save it to dictionary
                             top=tk.Toplevel(root)
@@ -644,7 +696,7 @@ def writeSpecs(msgLabel):
                             specDict[str(specData[2])] = specDoc
                     else:
                         specDoc = matches[0][3]
-                    print(specDoc)
+                    #print(specDoc)
                     copySpecs(specDoc, doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                 else:
                     #Check partial matches
@@ -661,7 +713,7 @@ def writeSpecs(msgLabel):
                 #if specs exist, copy and paste    
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                       and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
-                    print("An Exact Match")
+                    #print("An Exact Match")
                     copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                     
                 # If Manufacturer and Desc. match, copy specs
@@ -691,7 +743,7 @@ def writeSpecs(msgLabel):
         msgLabel.config(text="Error: Cannot save Specs.docx while file is open")
         return
     msgLabel.config(text="Successfully Created Specs Document")
-
+    print(str(time.time()-start_time) + " secs")
 #GUI
 
 #Select Input File
@@ -814,14 +866,14 @@ def ModifyEntry(con, tv, root, msg):
             msgLabel.config(text="Warning: Cannot open Doc file due to special characters in the name.")
             return
         res.set(str(db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], itemInfo["values"][3]], changes, cur)))    
-        print(res.get())
+        #print(res.get())
         top.destroy()
 
     submitButton = tk.Button(top, text="Submit", command=submit)
     submitButton.grid(row=7,column=2, pady = 20)
 
     root.wait_window(top)
-    print(res.get())
+    #print(res.get())
     if int(res.get()) <1:
         msg.config(text="Couldn\'t update entry")
         return
@@ -831,7 +883,7 @@ def ModifyEntry(con, tv, root, msg):
         msg.config(text="Successfully Modified Entry")
     changes = ch.get().split(",")
     if len(changes) < 4:
-        print("NO GO BRO")
+        #print("NO GO BRO")
         return
     con.commit()
     
@@ -859,7 +911,7 @@ def ModifyEntry(con, tv, root, msg):
     else:
         vals[2] = itemInfo['values'][2]
         vals[3] = itemInfo['values'][3]
-    print(vals[2] +":"+itemInfo['values'][2] + ":" + changes[3]) 
+    #print(vals[2] +":"+itemInfo['values'][2] + ":" + changes[3]) 
     tv.item(item, text=desc, values=vals)
     
 def AddEntry(con, tv, msg):
@@ -870,7 +922,7 @@ def AddEntry(con, tv, msg):
             missing.append(f)
             continue
         splitfile = f.split('/')
-        print(splitfile)
+        #print(splitfile)
         splitfile = splitfile[len(splitfile)-1].split('_')
         if len(splitfile) < 3:
             missing.append(f)
@@ -901,9 +953,9 @@ def DeleteEntry(con, tv, msg):
         return
     itemInfo = tv.item(item)
     tv.delete(item)
-    print(itemInfo)
+    #print(itemInfo)
     res = db.DeleteEntry(itemInfo['values'][3], cur)
-    print(res)
+    #print(res)
     if res[0] >1 or res[1]>1:
         msg.config(text = "Deleted Multiple Entries with doc: " + itemInfo['values'][3])
     elif res[0] and res[1]:  
@@ -917,7 +969,7 @@ def DeleteEntry(con, tv, msg):
 def UpdateSpecs(con,msg):
     cur = con.cursor()
     missing = db.UpdateSpecs(cur)
-    print(missing)
+    #print(missing)
     if missing:
         msg.config(text="Couldn\'t find the following files: " + "\n".join(missing))
     else:
@@ -1067,37 +1119,42 @@ def wsWindow():
     backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
 
     padLabel = tk.Label(root, text="")
-    padLabel.grid(row=9,column=1, padx=80, pady=30)
+    padLabel.grid(row=10,column=1, padx=80, pady=30)
 
     messageLabel = tk.Label(root, text="")
-    messageLabel.grid(row=8, column = 2, columnspan = 3)
+    messageLabel.grid(row=9, column = 2, columnspan = 3)
 
     infoLabel = tk.Label(root, text="Write Specs Document")
     infoLabel.grid(row=1, column=3, sticky= 'N', pady=30)
 
     inputLabel = tk.Label(root, wraplength = 250, text="The input file is: " + inputFilepath)
-    inputLabel.grid(row=4, column=2, columnspan =3)
+    inputLabel.grid(row=5, column=2, columnspan =3)
 
     inputButton = tk.Button(root, text="Select Input File", command=lambda:getFilepath(inputLabel))
-    inputButton.grid(row=2, column=2, padx=10, pady=30, rowspan=2)
+    inputButton.grid(row=3, column=2, padx=10, pady=30, rowspan=2)
 
     outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
-    outputLabel.grid(row=5, column=2, columnspan =3)
+    outputLabel.grid(row=6, column=2, columnspan =3)
 
     outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
-    outputButton.grid(row=2, column=4, padx=10, pady=10, rowspan=2)
+    outputButton.grid(row=3, column=4, padx=10, pady=10, rowspan=2)
 
     xlLabel = tk.Label(root, wraplength = 250, text="The ref sheet location is: " + excelFilepath)
-    xlLabel.grid(row=6, column=2, columnspan =3)
+    xlLabel.grid(row=7, column=2, columnspan =3)
     
     xlButton = tk.Button(root, text="Select Ref Sheet\n(Optional)", command=lambda:getExcelFile(xlLabel))
-    xlButton.grid(row=3, column=3, padx=10, pady=10)
+    xlButton.grid(row=4, column=3, padx=10, pady=10)
 
     refButton = tk.Button(root, text="Make Ref Sheet\n(Optional)", command=lambda:findSpecs(messageLabel))
-    refButton.grid(row=2, column=3, padx=10, pady=10)
+    refButton.grid(row=3, column=3, padx=10, pady=10)
+
+    var = tk.StringVar(root, "Imperial")
+    options = ["Imperial","Metric"]
+    drop = tk.OptionMenu(root, var, *options)
+    drop.grid(row=2, column=3, pady=10)
     
-    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel))
-    submitButton.grid(row=7, column = 3, pady = 20)
+    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel, var.get()))
+    submitButton.grid(row=8, column = 3, pady = 20)
 
 #No longer being used
 #Create Window for Finding Specs Function
