@@ -190,7 +190,7 @@ def findSpecs(msgLabel):
             ambiguousModels = ["custom", "custom design"]#Non-Unique Model No's
             specData = []
             #Manually fill field for custom fab
-            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value):
+            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value).upper():
                 specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
             #or Fill fields with Excel values
             else:
@@ -426,7 +426,7 @@ def writeSpecs(msgLabel, units):
             customFab = False
             
             #Check if custom fab
-            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
+            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value).upper()):
                 run = run + "Custom Fabrication"
                 customFab=True
             else:
@@ -447,8 +447,8 @@ def writeSpecs(msgLabel, units):
             run = run + ("\nPertinent Data:\t")
         
             #Remove "Custom Fabrication" from pert. data
-            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value):
-                temp = "See Plans, Drawing #___ "+"".join(row[headerIndexes[0]+5].value.split("CUSTOM FABRICATION"))
+            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value.upper()):
+                temp = "See Plans, Drawing #___ "+"".join(re.split("custom fabrication", row[headerIndexes[0]+5].value, flags=re.IGNORECASE))
                 run = run + temp
                 #if ", " in temp:
                 #    run = run + temp[2:]
@@ -542,12 +542,21 @@ def writeSpecs(msgLabel, units):
                     if "\n" in "".join(temp):
                         temp = "".join(temp).split("\n")
                     print(temp)
-                    if temp.count(temp[0]) == len(temp):
-                        tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + " CW")
+                    if metric and "mm" not in temp[0]:
+                        if temp.count(temp[0]) == len(temp):
+                            tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + "mm CW")
+                        else:
+                            tempList.append(", ".join(temp) + "mm CW")
                     else:
-                        tempList.append(", ".join(temp) + " CW")
+                        if temp.count(temp[0]) == len(temp):
+                            tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + " CW")
+                        else:
+                            tempList.append(", ".join(temp) + " CW")
                 else:
-                    tempList.append(str(row[headerIndexes[2]+4].value) + " CW")
+                    if metric and "mm" not in str(row[headerIndexes[2]+4].value):
+                        tempList.append(str(row[headerIndexes[2]+4].value) + "mm CW")
+                    else:
+                        tempList.append(str(row[headerIndexes[2]+4].value) + " CW")
             if row[headerIndexes[2]+5].value != None:
                 if metric and "mm" not in str(row[headerIndexes[2]+5].value):
                     tempList.append(str(row[headerIndexes[2]+5].value) + "mm HW")
@@ -556,7 +565,7 @@ def writeSpecs(msgLabel, units):
         
                 #Waste
             if row[headerIndexes[2]+7].value != None:
-                if metric and "mm" not in str(row[headerIndexes[2]+7].value)
+                if metric and "mm" not in str(row[headerIndexes[2]+7].value):
                     tempList.append(str(row[headerIndexes[2]+7].value) + "mm IW")
                 else:
                     tempList.append(str(row[headerIndexes[2]+7].value) + " IW")
@@ -593,7 +602,7 @@ def writeSpecs(msgLabel, units):
                     run = run + "; "
                 else:
                     is_empty = False
-                if metric and mm not in str(row[headerIndexes[2]+15].value):
+                if metric and "mm" not in str(row[headerIndexes[2]+15].value):
                     run = run + str(row[headerIndexes[2]+15].value) + "mm Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + "mm Chilled Water Return"
                 else:
                     run = run + str(row[headerIndexes[2]+15].value) + " Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + " Chilled Water Return"
@@ -604,7 +613,7 @@ def writeSpecs(msgLabel, units):
         
             #Add Header to doc
             p.add_run(run)
-            
+                        
             ambiguousModels = ["custom", "custom design"] #Model No. that aren't specific to a model
 
             #Make/find specs for item
@@ -736,6 +745,7 @@ def writeSpecs(msgLabel, units):
                             #Copy and paste from associated doc and highlighting from spec ref sheet
                             copySpecs(specRefs[3][index], doc.add_paragraph('', style = 'Spec_Header'),not specRefs[4][index],cur)
                             break                           
+        
     wb.close()
     try:
         doc.save(outputFilepath+"/Specs.docx")
