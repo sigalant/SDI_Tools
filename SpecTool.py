@@ -448,12 +448,13 @@ def writeSpecs(msgLabel, units):
         
             #Remove "Custom Fabrication" from pert. data
             if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value.upper()):
-                temp = "See Plans, Drawing #___ "+"".join(re.split("custom fabrication", row[headerIndexes[0]+5].value, flags=re.IGNORECASE))
-                run = run + temp
-                #if ", " in temp:
-                #    run = run + temp[2:]
-                #else:
-                #    run = run + "---"
+                temp = "".join(re.split("custom fabrication", row[headerIndexes[0]+5].value, flags=re.IGNORECASE))
+                #run = run + temp
+                #"See Plans, Drawing #___ "
+                if ", " in temp:
+                    run = run + temp[2:] + ", See Plans, Drawing #___ "
+                else:
+                    run = run + "See Plans, Drawing #___ "
             else:
                 if(row[headerIndexes[0]+5].value == None):
                     run = run + ("---")
