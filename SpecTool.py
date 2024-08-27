@@ -658,7 +658,7 @@ def writeSpecs(msgLabel, units):
                 cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
-                if type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value:
+                if type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value.upper():
                     specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
                 #Fill fields with Excel values
                 else:
