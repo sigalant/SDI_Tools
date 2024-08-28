@@ -55,6 +55,7 @@ errorMsg.pack(pady=40)
 #===============================================================================================================================
 
 def formatFile(voltList):
+    #============== Check Nothing is Missing ============================================================================================================
     #Stop if I/O paths not provided
     if inputFilepath == '':
         errorMsg.config(text= "Error: No input file selected")
@@ -74,7 +75,7 @@ def formatFile(voltList):
     wbNew=opx.Workbook()
     sheetNew=wbNew.active
 
-    indexDict = FindHeaders.FindHeaders(inputFilepath)#{}#Holds index of important values
+    hDict = FindHeaders.FindHeaders(inputFilepath)#{}#Holds index of important values
     #AMPS, KW, GPH, BTUS, EXH CFM, SUPPLY CFM, VOLTS, PH, HEAT REJECTION 
 
     inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection']
@@ -93,7 +94,7 @@ def formatFile(voltList):
     
 
 
-    #Copy all data to a 2D-List
+    #================= Copy all data to a 2D-List =========================================================================================================
     for row in sheet.rows:
         rowData = ['' for i in range(len(hDict))]#Holds all data from a row
         mult=1.0 #Holds value in paranthesis from amp cell
@@ -148,36 +149,36 @@ def formatFile(voltList):
         
         #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
         if type(rowData[hDict['volts']]) == list or type(rowData[hDict['ph']]) == list or type(rowData[hDict['amps']]) == list:
-            vs=rowData[indexDict['volts']]
-            ps=rowData[indexDict['ph']]
-            ams=rowData[indexDict['amps']]
+            vs=rowData[hDict['volts']]
+            ps=rowData[hDict['ph']]
+            ams=rowData[hDict['amps']]
             
             for i in range(2):
                 newRow = rowData.copy()
                 try:
                     assert type(vs) != str
-                    newRow[indexDict['VOLTS']] = vs[i]
+                    newRow[hDict['volts']] = vs[i]
                 except:
-                    newRow[indexDict['VOLTS']] = vs
+                    newRow[hDict['volts']] = vs
                 try:
                     assert type(ps) != str
-                    newRow[indexDict['PH']] = ps[i]
+                    newRow[hDict['ph']] = ps[i]
                 except:
-                    newRow[indexDict['PH']] = ps
+                    newRow[hDict['ph']] = ps
                 try:
                     assert type(ams) != str
-                    newRow[indexDict['AMPS']] = ams[i]
+                    newRow[hDict['amps']] = ams[i]
                 except:
                     if type(ams) == str:
-                        newRow[indexDict['AMPS']] = ams
+                        newRow[hDict['amps']] = ams
                     else:
-                        newRow[indexDict['AMPS']] = ams/mult
+                        newRow[hDict['amps']] = ams/mult
                 try:
                     if(i):
-                        newRow[indexDict['BTUS']] = None
-                        newRow[indexDict['EXH CFM']] = None
-                        newRow[indexDict['SUPPLY CFM']] = None
-                        newRow[indexDict['HEAT REJECTION']] = None
+                        newRow[hDict['btus']] = None
+                        newRow[hDict['exh cfm']] = None
+                        newRow[hDict['supply cfm']] = None
+                        newRow[hDict['heat rejection']] = None
                 except:
                     print('A Summing field may be missing')
                 sheetData.append(newRow)
@@ -186,7 +187,7 @@ def formatFile(voltList):
             
     
 
-#============Paste data================================================================================================================================    
+#============ Paste data ================================================================================================================================    
     #Excel File Heading
     sheetNew.row_dimensions[1].height=30
     sheetNew.row_dimensions[2].height=30.75
@@ -222,26 +223,29 @@ def formatFile(voltList):
     sheetNew.freeze_panes = sheetNew['C7']
     
     for row in range(1,len(sheetData)):
+
         #Check if area header
-        if sheetData[row][0] != None and sheetData[row][0] == str(sheetData[row][0]).upper() and sheetData[row][1] == None:
-            sheetNew.append([sheetData[row][0]])
-            sheetNew[sheetNew.max_row][0].font = opx.styles.Font(size=14, color='FFFFFF', bold=True)
+        if sheetData[row][hDict['no']] != None and sheetData[row][hDict['no']] == str(sheetData[row][hDict['no']]).upper() and sheetData[row][hDict['qty']] == None:
+            sheetNew.append([sheetData[row][hDict['no']]])
+            sheetNew[sheetNew.max_row][hDict['no']].font = opx.styles.Font(size=14, color='FFFFFF', bold=True)
             for i in range(sheetNew.max_column):
                 sheetNew[sheetNew.max_row][i].fill = opx.styles.PatternFill(fgColor="002060", fill_type="solid")
             continue
         
         #Add data
-        if type(sheetData[row][indexDict['AMPS']]) == str and sheetData[row][indexDict['AMPS']] != '':
-            sheetData[row][indexDict['AMPS']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['AMPS']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
-        if type(sheetData[row][indexDict['PH']]) == str and sheetData[row][indexDict['PH']] != '':
-            sheetData[row][indexDict['PH']] = float(sheetData[row][indexDict['PH']].split('PH')[0])
-        if sheetData[row][indexDict['VOLTS']] != None and sheetData[row][indexDict['VOLTS']] != '':
-            if '/' in str(sheetData[row][indexDict['VOLTS']]):
-                sheetData[row][indexDict['VOLTS']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
-            v = float(str(sheetData[row][indexDict['VOLTS']]).split('V')[0])
-            sheetData[row][indexDict['VOLTS']] = v
+        if type(sheetData[row][hDict['amps']]) == str and sheetData[row][hDict['amps']] != '':
+            sheetData[row][hDict['amps']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][hDict['amps']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
+        
+        if type(sheetData[row][hDict['ph']]) == str and sheetData[row][hDict['ph']] != '':
+            sheetData[row][hDict['ph']] = float(sheetData[row][hDict['ph']].split('PH')[0])
+        
+        if sheetData[row][hDict['volts']] != None and sheetData[row][hDict['volts']] != '':
+            if '/' in str(sheetData[row][hDict['volts']]):
+                sheetData[row][hDict['volts']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
+            v = float(str(sheetData[row][hDict['volts']]).split('V')[0])
+            sheetData[row][hDict['volts']] = v
             try:
-                sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"       
+                sheetData[row][hDict['kw']] = "=IF("+chr((hDict['kw']-2)+65)+str(row+7)+">1,(1.732*"+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000,("+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000)"       
             except Exception as e:
                 print(e)
         print(sheetData[row])
@@ -255,16 +259,16 @@ def formatFile(voltList):
             print(str(e))
 
         try:
-            if float(sheetData[row][indexDict['VOLTS']]) not in voltList:
-                sheetNew[row+7][indexDict['VOLTS']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
+            if float(sheetData[row][hDict['volts']]) not in voltList:
+                sheetNew[row+7][hDict['volts']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
         except:
             pass
         try:
-            sheetNew[sheetNew.max_row][indexDict['AMPS']].number_format="0.0"
+            sheetNew[sheetNew.max_row][hDict['amps']].number_format="0.0"
         except:
             pass
         try:
-            sheetNew[sheetNew.max_row][indexDict['KW']].number_format="0.00"
+            sheetNew[sheetNew.max_row][hDict['kw']].number_format="0.00"
         except:
             pass
 
@@ -274,44 +278,44 @@ def formatFile(voltList):
     sheetNew[sheetNew.max_row][0].font = opx.styles.Font(bold=True)
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['KW']].value = "=SUM("+chr(indexDict['KW']+65)+str(7)+":"+chr(indexDict['KW']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['KW']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['KW']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['kw']].value = "=SUM("+chr(hDict['kw']+65)+str(7)+":"+chr(hDict['kw']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['kw']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['kw']].font = opx.styles.Font(bold=True)
     except:
         pass
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['GPH']].value = "=SUM("+chr(indexDict['GPH']+65)+str(7)+":"+chr(indexDict['GPH']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['GPH']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['GPH']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['gph']].value = "=SUM("+chr(hDict['gph']+65)+str(7)+":"+chr(hDict['gph']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['gph']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['gph']].font = opx.styles.Font(bold=True)
     except:
         pass
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['BTUS']].value = "=SUM("+chr(indexDict['BTUS']+65)+str(7)+":"+chr(indexDict['BTUS']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['BTUS']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['BTUS']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['btus']].value = "=SUM("+chr(hDict['btus']+65)+str(7)+":"+chr(hDict['btus']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['btus']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['btus']].font = opx.styles.Font(bold=True)
     except:
         pass
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['EXH CFM']].value = "=SUM("+chr(indexDict['EXH CFM']+65)+str(7)+":"+chr(indexDict['EXH CFM']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['EXH CFM']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['EXH CFM']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['exh cfm']].value = "=SUM("+chr(hDict['exh cfm']+65)+str(7)+":"+chr(hDict['exh cfm']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['exh cfm']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['exh cfm']].font = opx.styles.Font(bold=True)
     except:
         pass
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['SUPPLY CFM']].value = "=SUM("+chr(indexDict['SUPPLY CFM']+65)+str(7)+":"+chr(indexDict['SUPPLY CFM']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['SUPPLY CFM']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['SUPPLY CFM']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['supply cfm']].value = "=SUM("+chr(hDict['supply cfm']+65)+str(7)+":"+chr(hDict['supply cfm']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['supply cfm']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['supply cfm']].font = opx.styles.Font(bold=True)
     except:
         pass
 
     try:
-        sheetNew[sheetNew.max_row][indexDict['HEAT REJECTION']].value = "=SUM("+chr(indexDict['HEAT REJECTION']+65)+str(7)+":"+chr(indexDict['HEAT REJECTION']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][indexDict['HEAT REJECTION']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][indexDict['HEAT REJECTION']].font = opx.styles.Font(bold=True)
+        sheetNew[sheetNew.max_row][hDict['heat rejection']].value = "=SUM("+chr(hDict['heat rejection']+65)+str(7)+":"+chr(hDict['heat rejection']+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict['heat rejection']].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict['heat rejection']].font = opx.styles.Font(bold=True)
     except:
         pass
     
