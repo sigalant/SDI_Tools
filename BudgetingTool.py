@@ -1,6 +1,7 @@
 #Imports
-import openpyxl as opx
+
 import tkinter as tk
+import openpyxl as opx
 import tkinter.ttk as ttk
 from datetime import date
 from tkinter import filedialog
@@ -11,13 +12,15 @@ import LogErrors
 import os
 import FindHeaders
 
+
+#File Paths
 inputFilepath = ""
 outputFilepath = ""
 
 #Default percent markup
 markup = 18
 
-#Tkinter GUI
+#============ Tkinter GUI ======================================================================================================
 root = tk.Tk()
 
 root.title("SDI Budget Formatting Tool")
@@ -27,6 +30,7 @@ ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
+#Help Menu
 menubar = tk.Menu(root)
 helpMenu = tk.Menu(menubar, tearoff=0)
 helpMenu.add_command(label="Help", command=lambda:os.startfile('Help.html'))
@@ -47,12 +51,12 @@ def handle_exception(exc,val,tb):
 
 root.report_callback_exception = handle_exception
 
+#GUI widgets
 inputFrame = tk.Frame(root)
 inputFrame.pack()
 
 markupFrame = tk.Frame(inputFrame)
 markupFrame.pack(side=tk.LEFT)
-
 
 markupLabel = tk.Label(markupFrame, text= "Markup Percent")
 markupLabel.pack()
@@ -70,14 +74,18 @@ gtLabel.pack()
 gtTextBox = tk.Entry(goodThroughFrame)
 gtTextBox.pack()
 
+#Error Message Label
 errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
 errorMsg = tk.Label(errorFrame, text="")
 errorMsg.pack(pady = 50)
-    
+
+#=====================================================================================================================================
 
 #Take Autoquotes export, and format it
 def formatFile():
+
+#====== CHECK FOR FILEPATHS AND HEADERS ====================================================================================================================
     
     if inputFilepath == "":
         errorMsg.config(text="Error: No input file selected")
@@ -87,26 +95,35 @@ def formatFile():
         errorMsg.config(text="Error: No output folder selected")
         return
 
+    #Message displayed if function completes without errors
     errorMsg.config(text="Spreadsheet Successfully Formatted")
 
     #Open Excel File 
     wb = opx.load_workbook(inputFilepath)
     sheet = wb.active
-
+    
+    #Get all headers
     hDict = FindHeaders.FindHeaders(inputFilepath)
-    headers = ['itemno','qty','category','sell','remarks','spec','model','unit','selltotal']
-    missing = []
+    headers = ['itemno','qty','category','sell','remarks','spec','model','unit','selltotal'] #Headers used in this function
+    missing = [] #Holds missing headers
+    #Check for missing headers
     for head in headers:
         if head not in hDict:
             missing.append(head)
-    #Fill 2D Array with information
+    #Display missing headers
+    if missing:
+        errorMsg.config(text="Warning: The following header(s) may be missing: " + ", ".join(missing))
 
-    data = [] #To  hold all project data for each item
+
+#========== COPY DATA FROM EXCEL SHEET ======================================================================================================================
+    
+    #Fill 2D Array with information
+    data = [] #To hold all project data for each item
 
     for row in sheet.rows:
         #Collect data from each row (Skipping empty cells)
+
         rowData = ["" for i in range(len(hDict))] #To hold data for a single item
-        #print(row[0].fill.start_color.index)
         
         #row[0].fill.start_color.index[:2]   # Alpha (unimportant)
         r = int(row[0].fill.start_color.index[2:4], 16)  # Red
@@ -115,9 +132,10 @@ def formatFile():
         
 
         #Skip first row and non-white rows
-        if row[0].value == "ItemNo" or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16)):
-            print(str(row[0].fill.start_color.index) + ":" + str(row[0].row))
+        if (('itemno' in hDict and str(row[hDict['itemno']].value).lower() == "ItemNo".lower()) 
+            or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16))):
             continue
+        
         for header in hDict:
             #Add each header value for each item. If header not found, add empty value
             try:
@@ -127,24 +145,23 @@ def formatFile():
                 rowData[hDict[header]] = ''
 
         #Remove Cost and Qty of SpareNo items
-        if rowData[hDict['category']] != None: 
+        if 'category' in hDict and rowData[hDict['category']] != None: 
             rowData[hDict['category']] = str(rowData[hDict['category']]).upper()
-            if rowData[hDict['category']] == "SPARENO":
+            if rowData[hDict['category']] == "SPARENO" and 'qty' in hDict and 'sell' in hDict:
                 rowData[hDict['category']] = 'SpareNo'
                 rowData[hDict['qty']] = '-'
                 rowData[hDict['sell']] = ''
 
         #Check if item not in contract
-        if type(rowData[hDict['remarks']]) == str:
-            if "os&e" in str(rowData[hDict['remarks']]).lower() or "by vendor" in str(rowData[hDict['remarks']]).lower() or 'contractor' in str(rowData[hDict['remarks']]).lower() or 'millwork' in str(rowData[hDict['remarks']]).lower():
+        if 'sell' in hDict and 'remarks' in hDict and type(rowData[hDict['remarks']]) == str:
+            if ("os&e" in str(rowData[hDict['remarks']]).lower() or "by vendor" in str(rowData[hDict['remarks']]).lower() or 'contractor' in str(rowData[hDict['remarks']]).lower() or 'millwork' in str(rowData[hDict['remarks']]).lower()):
                 rowData[hDict['sell']] = 'NIC'
-            elif "os&e" in str(rowData[hDict['model']]).lower():
+            elif 'model' in hDict and "os&e" in str(rowData[hDict['model']]).lower():
                 rowData[hDict['sell']] = 'NIC'
         #Add data for row to 2D array of all project data
         data.append(rowData)
-        
 
-
+#========== HEADER INFORMATION ==================================================================================================================================================================================================================================================================================        
 
     #Create new Excel File
     
@@ -227,10 +244,12 @@ def formatFile():
     
     errorShown = False
     
+#============= PASTE COPIED DATA =======================================================================================================================================================================================================================================================
+
     #Copy previously collected data to a new XL sheet
     for i in range(len(data)):
         
-        if data[i][hDict['spec']] != None and data[i][hDict['spec']] == str(data[i][hDict['spec']]).upper() and data[i][hDict['itemno']] == None:
+        if 'spec' in hDict and 'itemno' in hDict and data[i][hDict['spec']] != None and data[i][hDict['spec']] == str(data[i][hDict['spec']]).upper() and data[i][hDict['itemno']] == None:
             
             #If there isn't title, use the first location header as a title
             if sheetNew['A2'].value == "":
@@ -254,33 +273,35 @@ def formatFile():
             
             rowNum = rowNum+1
         else:
-            if data[i][0] == None and not errorShown:
+            if 'itemno' in hDict and data[i][hDict['itemno']] == None and not errorShown:
                 tk.messagebox.showerror('Formatting Error', "Error: Please collapse all items in autocad before export")
                 errorShown = True
 
-            sheetNew[("A"+str(rowNum))] = data[i][hDict['itemno']]
-            if data[i][hDict['unit']] != None and str(data[i][hDict['unit']]).lower() == 'ft':
+            if 'itemno' in hDict: sheetNew[("A"+str(rowNum))] = data[i][hDict['itemno']]
+            if 'unit' in hDict and 'qty' in hDict and data[i][hDict['unit']] != None and str(data[i][hDict['unit']]).lower() == 'ft':
                 sheetNew[("B"+str(rowNum))] = 1
             else:
-                sheetNew[("B"+str(rowNum))] = data[i][hDict['qty']]
-            sheetNew[("C"+str(rowNum))] = data[i][hDict['category']]
+                if 'qty' in hDict: sheetNew[("B"+str(rowNum))] = data[i][hDict['qty']]
+            if 'category' in hDict: sheetNew[("C"+str(rowNum))] = data[i][hDict['category']]
             sheetNew['C'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text = True)
-            sheetNew[("D"+str(rowNum))] = data[i][hDict['model']]
-            sheetNew[("E"+str(rowNum))] = data[i][hDict['sell']]
+            if 'model' in hDict: sheetNew[("D"+str(rowNum))] = data[i][hDict['model']]
+            if 'sell' in hDict: sheetNew[("E"+str(rowNum))] = data[i][hDict['sell']]
             sheetNew[("E"+str(rowNum))].number_format = "$#,##0.00"
             try:
                 sheetNew[("F"+str(rowNum))] = float(data[i][hDict['sell']])*float(data[i][hDict['qty']])
             except Exception:
-                sheetNew[("F"+str(rowNum))] = data[i][hDict['sell']]
-            if (data[i][hDict['unit']] != None and 'ft' in str(data[i][hDict['unit']]).lower()) or (data[i][hDict['remarks']] != None and 'custom fab' in str(data[i][hDict['remarks']]).lower()):
-                sheetNew['F'+str(rowNum)] = data[i][hDict['selltotal']]
+                if 'sell' in hDict: sheetNew[("F"+str(rowNum))] = data[i][hDict['sell']]
+            if ('unit' in hDict and data[i][hDict['unit']] != None and 'ft' in str(data[i][hDict['unit']]).lower()) or ('remarks' in hDict and data[i][hDict['remarks']] != None and 'custom fab' in str(data[i][hDict['remarks']]).lower()):
+                if 'selltotal' in hDict: sheetNew['F'+str(rowNum)] = data[i][hDict['selltotal']]
             sheetNew["F"+str(rowNum)].number_format = "$#,##0.00"
-            sheetNew[("H"+str(rowNum))] = data[i][hDict['remarks']]
+            if 'remarks' in hDict: sheetNew[("H"+str(rowNum))] = data[i][hDict['remarks']]
             sheetNew['H'+str(rowNum)].alignment = opx.styles.Alignment(wrap_text=True)
             sheetNew[("H"+str(rowNum))].font = opx.styles.Font(color = '595959')
             sheetNew['E'+str(rowNum)].alignment = opx.styles.Alignment(horizontal = 'right', vertical = 'center')
             sheetNew['F'+str(rowNum)].alignment = opx.styles.Alignment(horizontal = 'right', vertical = 'center')
         rowNum = rowNum+1
+
+#============= ADD FOOTER INFORMATION ============================================================================================================================================================================================================================================================
 
     for i in range(6):
         sheetNew[rowNum][i].border = opx.styles.borders.Border(bottom=opx.styles.borders.Side(style='thick'))
@@ -325,14 +346,14 @@ def formatFile():
     else:
         sheetNew['A'+str(rowNum+9)] = "3. Price is good through _____________"
     sheetNew['A'+str(rowNum+9)].font = opx.styles.Font(color ='595959')
-
+#=======================================================================================================================================================================================================================================================================================================
     wbNew.save(newFile)
 
 
 
 
 
-
+# More tkinter stuff
 frame = tk.Frame(root)
 frame.pack(padx=40, pady=40)
 
@@ -368,7 +389,6 @@ in_file.pack(padx=10, pady=15, side=tk.LEFT)
 
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
 out_folder.pack(padx=10, pady=15, side=tk.LEFT)
-
 
 
 root.mainloop()

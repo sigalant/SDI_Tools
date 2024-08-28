@@ -9,6 +9,7 @@ from datetime import date
 from tkinter import filedialog
 from PIL import Image, ImageTk
 import os
+import FindHeaders
 #sys.excepthook = LogErrors.handle_exception
 
 #Holds I/O filepaths
@@ -16,7 +17,7 @@ inputFilepath = ""
 outputFilepath = ""
 
 
-#Root window
+#===== Root window =============================================================================================================
 root = tk.Tk()
 
 root.title("SDI Bulk Loads Formatting Tool")
@@ -51,6 +52,7 @@ errorFrame = tk.Frame(root)
 errorFrame.pack(side=tk.BOTTOM)
 errorMsg = tk.Label(errorFrame, text="")
 errorMsg.pack(pady=40)
+#===============================================================================================================================
 
 def formatFile(voltList):
     #Stop if I/O paths not provided
@@ -72,61 +74,42 @@ def formatFile(voltList):
     wbNew=opx.Workbook()
     sheetNew=wbNew.active
 
-    indexDict = {}#Holds index of important values
+    indexDict = FindHeaders.FindHeaders(inputFilepath)#{}#Holds index of important values
+    #AMPS, KW, GPH, BTUS, EXH CFM, SUPPLY CFM, VOLTS, PH, HEAT REJECTION 
+
+    inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection']
+    missing = []
+    for header in inList:
+        if header not in hDict:
+            missing.append(header)
+    if missing:
+        #TODO: Check for metric headers before giving up
+        errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
+        errorMsg.config(text=errorStr)
+        return
+
     sheetData = []#Holds all data from the sheet
     summingIndexes = []#Holds indexes of values that sum (probably not necessary)
     
-    #Copy all data to a 2D-List, and save indexes of important values
+
+
+    #Copy all data to a 2D-List
     for row in sheet.rows:
-        rowData = []#Holds all data from a row
+        rowData = ['' for i in range(len(hDict))]#Holds all data from a row
         mult=1.0 #Holds value in paranthesis from amp cell
         
 
-        for col in range(sheet.max_column):
-            cellData = row[col].value
+        for head in hDict:
+            cellData = row[hDict[head]].value
             
-            
-            #Get indexes from the first row
-            match cellData:
-                case str(x) if 'AMPS' in x and 'AMPS' not in indexDict:
-                    indexDict['AMPS'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'KW' in x and 'KW' not in indexDict:
-                    indexDict['KW'] = col
-                case str(x) if 'GPH' in x or 'LPH' in x and 'GPH' not in indexDict:
-                    indexDict['GPH'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'BTUS' in x and 'BTUS' not in indexDict:
-                    indexDict['BTUS'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'EXH CFM' in x and 'EXH CFM' not in indexDict:
-                    indexDict['EXH CFM'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'SUPPLY CFM' in x and 'SUPPLY CFM' not in indexDict:
-                    indexDict['SUPPLY CFM'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'VOLTS' in x and 'VOLTS' not in indexDict:
-                    indexDict['VOLTS'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'PH' in x and 'PH' not in indexDict:
-                    indexDict['PH'] = col
-                    summingIndexes.append(col)
-                case str(x) if 'HEAT REJECTION' in x and 'HEAT REJECTION' not in indexDict:
-                    indexDict['HEAT REJECTION'] = col
-                    summingIndexes.append(col)
-                case _:
-                    pass
-
             #Remove commas for better number processing
             if type(cellData) == str:
                 cellData = cellData.replace(',','')
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                if col in summingIndexes:
-
-                    #try:
-                    if '(' in str(cellData) and col == indexDict['AMPS']:
+                if head in inList:
+                    if '(' in str(cellData) and head == 'amps':
                         cellData = (cellData.split("_x000D_"))
                         for i in range(len(cellData)):
                             if '(' in cellData[i]:
@@ -134,89 +117,40 @@ def formatFile(voltList):
                                 cellData[i] = fList[0]*fList[1]
                             else:
                                 cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
-                    elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
+                    elif head in ['amps','volts','ph']:
                         cellData = ' '.join(cellData.split("_x000D_"))
                         cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
                     else:
                         cellData = ' '.join(cellData.split("_x000D_"))
                         cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
-                    #except Exception as e:
-                    #    print("Something went wrong:" + str(e))
                 else:
                     cellData = cellData.split("_x000D_")[0]
-            try:
-                #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
-                if ')' in str(cellData) and col == indexDict['AMPS']:
-                    cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
-                    mult= cellData[0]
-                    cellData = cellData[0] * cellData[1]
-            except Exception as e:
-                print("Something especially went wrong: "+str(e))
             
-            if type(cellData) == str and row[col].row>1 and col in summingIndexes:
-                try:
-                    if indexDict['GPH'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
-                except Exception as e:
-                    
-                    print(cellData)
-                    print("Error: " + str(e))
-                    print("GPH column not found")
-                    pass
-                try:
-                    if indexDict['BTUS'] == col:
-                        cellData = re.findall(r'\d+',cellData)
-                        if len(cellData) > 1:
-                            cellData = int(cellData[0])*int(cellData[1])
-                        else:
-                            cellData = int(cellData[0])
-                except Exception as e:
-                    print(cellData)
-                    print("Error: " + str(e))
-                    print("BTUS column not found")
-                    pass
-                try:
-                    if indexDict['EXH CFM'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
-                except Exception as e:
-                    print(cellData)
-                    print("Error: " + str(e))
-                    print("EXH CFM column not found")
-                    pass
-                try:
-                    if indexDict['SUPPLY CFM'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
-                except Exception as e:
-                    print(cellData)
-                    print("Error: " + str(e))
-                    print("SUPPLY CFM column not found")
-                try:
-                    if indexDict['HEAT REJECTION'] == col:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
-                except Exception as e:
-                    print(cellData)
-                    print("Error: " + str(e))
-                    print("HEAT REJECTION column not found")
-                    pass
-                
-            rowData.append(cellData)
+            #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
+            if ')' in str(cellData) and head == 'amps':
+                cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+                mult= cellData[0]
+                cellData = cellData[0] * cellData[1]
 
-        #Make error message if an index is missing
-        indexes = ['AMPS','PH','VOLTS','KW','GPH','BTUS','EXH CFM','SUPPLY CFM', 'HEAT REJECTION']
-        missing = []
-        for index in indexes:
-            if index not in indexDict:
-                missing.append(index)
-        if missing:
-            errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
-            errorMsg.config(text=errorStr)
-            return
+            #Strip summing fields of everything except a number
+            if type(cellData) == str and row[hDict[head]].row>1 and head in inList:
+                if head in ['gph', 'exh cfm', 'supply cfm', 'heat rejection']:
+                    cellData = float(re.findall(r'\d+',cellData)[0])
+                elif head == 'btus':
+                    cellData = re.findall(r'\d+',cellData)
+                    if len(cellData) > 1:
+                        cellData = int(cellData[0])*int(cellData[1])
+                    else:
+                        cellData = int(cellData[0])
 
+            rowData[hDict[head]] = cellData
+
+        
         #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
-        if type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or type(rowData[indexDict['AMPS']]) == list:
-            vs=rowData[indexDict['VOLTS']]
-            ps=rowData[indexDict['PH']]
-            ams=rowData[indexDict['AMPS']]
+        if type(rowData[hDict['volts']]) == list or type(rowData[hDict['ph']]) == list or type(rowData[hDict['amps']]) == list:
+            vs=rowData[indexDict['volts']]
+            ps=rowData[indexDict['ph']]
+            ams=rowData[indexDict['amps']]
             
             for i in range(2):
                 newRow = rowData.copy()
@@ -252,7 +186,7 @@ def formatFile(voltList):
             
     
 
-    
+#============Paste data================================================================================================================================    
     #Excel File Heading
     sheetNew.row_dimensions[1].height=30
     sheetNew.row_dimensions[2].height=30.75
