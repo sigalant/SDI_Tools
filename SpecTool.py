@@ -65,7 +65,7 @@ def copySpecs(tempDocPath, p, highlight, cur):
     try:
         specText = cur.execute("SELECT text FROM spec WHERE doc='" + tempDocPath + "'").fetchone()[0].split("\n")
     except:
-        #print("Specs not found for: " + tempDocPath)
+        print("Specs not found for: " + tempDocPath)
         return -1
     #Begin copying after header
     i = 0
@@ -260,6 +260,8 @@ def writeSpecs(msgLabel, units):
         metric = False
     
     specDict = {}
+
+    broken = [] #Holds links from SpecRefSheet that couldn't be found in the database
     
     #Create doc and style
     doc = d.Document("V:\\Specs\\Specs Script\\Template Specs_Word Files\\Style_Template.docx")
@@ -309,7 +311,12 @@ def writeSpecs(msgLabel, units):
                 specRefs[4].append(False)
             else:
                 try:
-                    specRefs[3].append(str(row[3].value).split('\"')[1].replace('[','').replace(']',''))
+                    if "HYPERLINK" in str(row[3].value): 
+                        specRefs[3].append(str(row[3].value).split('\"')[1].replace('[','').replace(']',''))
+                    else:
+                        path = str(row[3].value).replace('\\','/')
+                        if '.docx' not in path: path = path + ".docx"
+                        specRefs[3].append(path)
                 except:
                     specRefs[3].append("Broken Hyperlink :(")
                 if row[0].fill == yellowFill:
@@ -716,7 +723,8 @@ def writeSpecs(msgLabel, units):
                         matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
                     if matches:
                         copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
-                
+
+            #If Spec Ref Sheet has been provided
             else:
                 con = sqlite3.connect("specsDB.db")
                 cur = con.cursor()
@@ -724,7 +732,8 @@ def writeSpecs(msgLabel, units):
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
                       and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
                     #print("An Exact Match")
-                    copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur)
+                    if -1 == copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] not in broken:
+                        broken.append(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())])
                     
                 # If Manufacturer and Desc. match, copy specs
                 elif (row[headerIndexes[0]+4].value != None and str(row[headerIndexes[0]+4].value).lower() in specRefs[0]):
@@ -744,16 +753,20 @@ def writeSpecs(msgLabel, units):
                             if(specRefs[3][index] == ""):
                                 continue
                             #Copy and paste from associated doc and highlighting from spec ref sheet
-                            copySpecs(specRefs[3][index], doc.add_paragraph('', style = 'Spec_Header'),not specRefs[4][index],cur)
+                            if -1 == copySpecs(specRefs[3][index], doc.add_paragraph('', style = 'Spec_Header'),not specRefs[4][index],cur) and specRefs[3][index] not in broken:
+                                broken.append(specRefs[3][index])
                             break                           
-        
+
     wb.close()
     try:
         doc.save(outputFilepath+"/Specs.docx")
     except:
         msgLabel.config(text="Error: Cannot save Specs.docx while file is open")
         return
-    msgLabel.config(text="Successfully Created Specs Document")
+    if broken:
+        msgLabel.config(text= "The following doc file(s) could not be found: \n" + '\n'.join(broken))
+    else:
+        msgLabel.config(text="Successfully Created Specs Document")
     print(str(time.time()-start_time) + " secs")
 #GUI
 
@@ -1116,6 +1129,7 @@ def DBWindow():
 
 #Create Window for Writing Specs Function
 def wsWindow():
+    root.geometry("800x600")
     for widget in root.winfo_children():
         widget.destroy()
 
