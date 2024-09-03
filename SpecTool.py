@@ -118,7 +118,17 @@ def ChooseSpec(chosenSpec, popup, tv):
 
 #Find matching Specs for each item, and enter into .xlsx file highlighting partial matches and non-matches
 def findSpecs(msgLabel):
-    con = sqlite3.connect("specsDB.db")
+    con = None
+    try:
+        con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+    except sqlite3.OperationalError:
+        con=sqlite3.connect("specsDB.db")
+        cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        con.commit()
+
+        #TODO: Make empty tables and commit 
     cur = con.cursor()
 
     #Make sure input/output paths exist
@@ -684,7 +694,15 @@ def writeSpecs(msgLabel, units):
                 
             #If excel sheet is not provided, search through DB for a match
             elif excelFilepath == "":
-                con = sqlite3.connect("specsDB.db")
+                con = None #sqlite3.connect("specsDB.db")
+                try:
+                    con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+                except sqlite3.OperationalError:
+                    con=sqlite3.connect("specsDB.db")
+                    cur = con.cursor()
+                    cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    con.commit()
                 cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
@@ -749,7 +767,15 @@ def writeSpecs(msgLabel, units):
 
             #If Spec Ref Sheet has been provided
             else:
-                con = sqlite3.connect("specsDB.db")
+                con = None #sqlite3.connect("specsDB.db")
+                try:
+                    con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+                except sqlite3.OperationalError:
+                    con=sqlite3.connect("specsDB.db")
+                    cur = con.cursor()
+                    cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    con.commit()
                 cur = con.cursor()
                 #if specs exist, copy and paste    
                 if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
@@ -1098,7 +1124,15 @@ def DBWindow():
     treeview.column('#4', stretch='no', minwidth=0, width=0, anchor=tk.E)
     treeview.tag_bind('tag?', "<Double-1>", lambda event, msg=messageBox:openFile(event, msg))
 
-    con = sqlite3.connect("specsDB.db")
+    con = None #sqlite3.connect("specsDB.db")
+    try:
+        con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+    except sqlite3.OperationalError:
+        con=sqlite3.connect("specsDB.db")
+        cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        con.commit()
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()
 
