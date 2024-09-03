@@ -253,7 +253,7 @@ def findSpecs(msgLabel):
                                 minDist = temp
                                 closest = s
                         return closest
-
+                    
                     if len(matches) > 1:
                         bestMatch = matches[0]
                         if specData[2] == 'Stainless Steel':
@@ -759,11 +759,29 @@ def writeSpecs(msgLabel, units):
                 else:
                     #Check partial matches
                     if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
-                        matches = cur.execute("SELECT doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
+                        matches = cur.execute("SELECT desc, model, doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
                     if not matches: 
-                        matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
+                        matches = cur.execute("SELECT desc, model, doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
                     if matches:
-                        copySpecs(matches[0][0], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
+                        def closestMatch(s1, sList, i):
+                            minDist = max(len(sList[0][i]), len(s1))
+                            closest = sList[0]
+                            for s in sList:
+                                temp = edit_distance(s1, s[i])
+                                if temp < minDist:
+                                    minDist = temp
+                                    closest = s
+                            return closest
+
+                        bestMatch = matches[0]
+                        if len(matches) > 1:
+                            if specData[2] == 'Stainless Steel':
+                                bestMatch = closestMatch(specData[0], matches, 0)
+                            else:
+                                bestMatch = closestMatch(specData[2], matches, 1)
+                
+                            print(str(specData[2]) + ":" + str(bestMatch) + ":" + str(matches))
+                        copySpecs(bestMatch[2], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
 
             #If Spec Ref Sheet has been provided
             else:
