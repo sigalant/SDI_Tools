@@ -78,21 +78,29 @@ def formatFile(voltList):
     hDict = FindHeaders.FindHeaders(inputFilepath)#{}#Holds index of important values
     #AMPS, KW, GPH, BTUS, EXH CFM, SUPPLY CFM, VOLTS, PH, HEAT REJECTION 
 
-    inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection']
+    inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
+    metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
+    summingIndexes = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'heat rejection']
     missing = []
     for header in inList:
         if header not in hDict:
             missing.append(header)
+    metricMissing = []
+    for header in metricInList:
+        if header not in hDict:
+            metricMissing.append(header)
     if missing:
-        #TODO: Check for metric headers before giving up
-        errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
-        errorMsg.config(text=errorStr)
-        return
+        if metricMissing:
+            errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
+            errorMsg.config(text=errorStr)
+            return
+        print("It's bloody metric innit bruv... chewsday")
+        inList = metricInList
+        summingIndexes = ['amps','lph','gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
 
     sheetData = []#Holds all data from the sheet
-    summingIndexes = []#Holds indexes of values that sum (probably not necessary)
+    #summingIndexes = []#Holds indexes of values that sum (probably not necessary)
     
-
 
     #================= Copy all data to a 2D-List =========================================================================================================
     for row in sheet.rows:
@@ -109,7 +117,7 @@ def formatFile(voltList):
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
-                if head in inList:
+                if head in summingIndexes or head in ['volts', 'ph', 'amps']:
                     if '(' in str(cellData) and head == 'amps':
                         cellData = (cellData.split("_x000D_"))
                         for i in range(len(cellData)):
@@ -134,16 +142,21 @@ def formatFile(voltList):
                 cellData = cellData[0] * cellData[1]
 
             #Strip summing fields of everything except a number
-            if type(cellData) == str and row[hDict[head]].row>1 and head in inList:
-                if head in ['gph', 'exh cfm', 'supply cfm', 'heat rejection']:
-                    cellData = float(re.findall(r'\d+',cellData)[0])
-                elif head == 'btus':
+            if type(cellData) == str and row[hDict[head]].row>1 and head in summingIndexes:
+                if head in ('btus','gas kw'):
                     cellData = re.findall(r'\d+',cellData)
                     if len(cellData) > 1:
                         cellData = int(cellData[0])*int(cellData[1])
                     else:
-                        cellData = int(cellData[0])
-
+                        try:
+                            cellData = int(cellData[0])
+                        except:
+                            print("This file if f****'d")
+                elif head != 'amps':
+                    try:
+                        cellData = float(re.findall(r'\d+',cellData)[0])
+                    except:
+                        print("This file is no flippin good bro")
             rowData[hDict[head]] = cellData
 
         
@@ -155,32 +168,27 @@ def formatFile(voltList):
             
             for i in range(2):
                 newRow = rowData.copy()
-                try:
-                    assert type(vs) != str
+                if type(vs) == list:
                     newRow[hDict['volts']] = vs[i]
-                except:
+                else:
                     newRow[hDict['volts']] = vs
-                try:
-                    assert type(ps) != str
+                if type(ps) == list:
                     newRow[hDict['ph']] = ps[i]
-                except:
+                else:
                     newRow[hDict['ph']] = ps
-                try:
-                    assert type(ams) != str
+                if type(ams) == list:
                     newRow[hDict['amps']] = ams[i]
-                except:
+                else:
                     if type(ams) == str:
                         newRow[hDict['amps']] = ams
                     else:
                         newRow[hDict['amps']] = ams/mult
-                try:
-                    if(i):
-                        newRow[hDict['btus']] = None
-                        newRow[hDict['exh cfm']] = None
-                        newRow[hDict['supply cfm']] = None
-                        newRow[hDict['heat rejection']] = None
-                except:
-                    print('A Summing field may be missing')
+                if(i):
+                    for entry in summingIndexes:
+                        if entry in ('amps','kw'):
+                            continue
+                        newRow[hDict[entry]] = None
+                
                 sheetData.append(newRow)
         else:
             sheetData.append(rowData)
@@ -244,11 +252,9 @@ def formatFile(voltList):
                 sheetData[row][hDict['volts']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
             v = float(str(sheetData[row][hDict['volts']]).split('V')[0])
             sheetData[row][hDict['volts']] = v
-            try:
+            if 'kw' in hDict:
                 sheetData[row][hDict['kw']] = "=IF("+chr((hDict['kw']-2)+65)+str(row+7)+">1,(1.732*"+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000,("+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000)"       
-            except Exception as e:
-                print(e)
-        print(sheetData[row])
+        #print(sheetData[row])
         sheetNew.append(sheetData[row])
         
         #Alignments
@@ -276,48 +282,14 @@ def formatFile(voltList):
     sheetNew.append([""])
     sheetNew.append(["Total"])
     sheetNew[sheetNew.max_row][0].font = opx.styles.Font(bold=True)
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['kw']].value = "=SUM("+chr(hDict['kw']+65)+str(7)+":"+chr(hDict['kw']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['kw']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['kw']].font = opx.styles.Font(bold=True)
-    except:
-        pass
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['gph']].value = "=SUM("+chr(hDict['gph']+65)+str(7)+":"+chr(hDict['gph']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['gph']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['gph']].font = opx.styles.Font(bold=True)
-    except:
-        pass
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['btus']].value = "=SUM("+chr(hDict['btus']+65)+str(7)+":"+chr(hDict['btus']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['btus']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['btus']].font = opx.styles.Font(bold=True)
-    except:
-        pass
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['exh cfm']].value = "=SUM("+chr(hDict['exh cfm']+65)+str(7)+":"+chr(hDict['exh cfm']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['exh cfm']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['exh cfm']].font = opx.styles.Font(bold=True)
-    except:
-        pass
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['supply cfm']].value = "=SUM("+chr(hDict['supply cfm']+65)+str(7)+":"+chr(hDict['supply cfm']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['supply cfm']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['supply cfm']].font = opx.styles.Font(bold=True)
-    except:
-        pass
-
-    try:
-        sheetNew[sheetNew.max_row][hDict['heat rejection']].value = "=SUM("+chr(hDict['heat rejection']+65)+str(7)+":"+chr(hDict['heat rejection']+65)+str(sheetNew.max_row-1)+")"
-        sheetNew[sheetNew.max_row][hDict['heat rejection']].number_format="#,##0"
-        sheetNew[sheetNew.max_row][hDict['heat rejection']].font = opx.styles.Font(bold=True)
-    except:
-        pass
+    
+    for header in summingIndexes:
+        try:
+            sheetNew[sheetNew.max_row][hDict[header]].value = "=SUM("+chr(hDict[header]+65)+str(7)+":"+chr(hDict[header]+65)+str(sheetNew.max_row-1)+")"
+            sheetNew[sheetNew.max_row][hDict[header]].number_format="#,##0"
+            sheetNew[sheetNew.max_row][hDict[header]].font = opx.styles.Font(bold=True)
+        except Exception as e:
+            print("Error with header: " + str(e))
     
     wbNew.save(newFile)
 
