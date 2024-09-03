@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 5, in <module>
+    import SpecDB as db
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecDB.py", line 2, in <module>
+    import docx as d
+ModuleNotFoundError: No module named 'docx'

@@ -4,7 +4,11 @@
 a = Analysis(
     ['BulkLoads.py'],
     pathex=[],
+<<<<<<< HEAD:BulkLoads.spec
     binaries=[('LogErrors.py', '.')],
+=======
+    binaries=[('SpecDB.py', '.')],
+>>>>>>> SpecDB:SpecTool.spec
     datas=[],
     hiddenimports=[],
     hookspath=[],
