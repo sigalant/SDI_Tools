@@ -4,6 +4,7 @@
 import LogErrors
 import SpecDB as db
 import sqlite3
+from fast_edit_distance import edit_distance
 
 import docx as d
 import openpyxl as opx
@@ -222,15 +223,37 @@ def findSpecs(msgLabel):
                 
             #Else look for partial matches
             else:
+                
+                
                 #Check for partially matching model and manufacturer
                 if (specData[1] != "Custom Fabrication" and str(specData[2]).lower() not in ambiguousModels):
-                    matches = cur.execute("SELECT doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
+                    matches = cur.execute("SELECT desc, model, doc FROM item WHERE model LIKE '%" + str(specData[2]).replace("'","''").replace('"','""') + "%' AND manu LIKE '%" + str(specData[1]).replace("'","''").replace('"','""') + "%'").fetchall()
                 #If there still aren't matches search for partially matching description and manufacturer
                 if not matches: 
-                    matches = cur.execute("SELECT doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
+                    matches = cur.execute("SELECT desc, model, doc FROM item WHERE desc LIKE '%" + str(specData[0]).replace("'","''").replace('"','""')+ "%' AND manu LIKE '%"+ str(specData[1]).replace("'","''").replace('"','""') +"%'").fetchall()
                 #If there was a match, add a link and highlight yellow
                 if matches:
-                    newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('/')[len(matches[0][0].split('/'))-1].split('.docx')[0] +"\")"
+
+                    def closestMatch(s1, sList, i):
+                        minDist = max(len(sList[0][i]), len(s1))
+                        closest = sList[0]
+                        for s in sList:
+                            temp = edit_distance(s1, s[i])
+                            if temp < minDist:
+                                minDist = temp
+                                closest = s
+                        return closest
+
+                    if len(matches) > 1:
+                        bestMatch = matches[0]
+                        if specData[2] == 'Stainless Steel':
+                            bestMatch = closestMatch(specData[0], matches, 0)
+                        else:
+                            bestMatch = closestMatch(specData[2], matches, 1)
+                        newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + bestMatch[2] + "]\",\""+bestMatch[2].split('/')[len(bestMatch[2].split('/'))-1].split('.docx')[0] +"\")"
+                        print(str(specData[2]) + ":" + str(bestMatch) + ":" + str(matches))
+                    else:
+                        newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][2] + "]\",\""+ matches[0][2].split('/')[len(matches[0][2].split('/'))-1].split('.docx')[0] +"\")"
                     for i in range(0,4):
                         newSheet[rowIndex][i].fill = yellowFill
                 #Otherwise highlight red
