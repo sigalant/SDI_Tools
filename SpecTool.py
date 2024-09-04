@@ -2,6 +2,7 @@
 
 #Imports
 import LogErrors
+import FindHeaders
 import SpecDB as db
 import sqlite3
 from fast_edit_distance import edit_distance
@@ -125,7 +126,7 @@ def findSpecs(msgLabel):
         con=sqlite3.connect("specsDB.db")
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
         con.commit()
 
         #TODO: Make empty tables and commit 
@@ -149,6 +150,9 @@ def findSpecs(msgLabel):
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
     noFill = opx.styles.PatternFill(start_color = 'FFFFFF', end_color = 'FFFFFF', fill_type = 'solid')
+
+    hDict = FindHeaders.FindHeaders(inputFilepath)
+    print(hDict)
     
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
@@ -156,6 +160,7 @@ def findSpecs(msgLabel):
         
         #Find header locations
         if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':  
+            #################### POO POO GARBAGE STINKY TRASH ##########################
             if row[0].value == 'EQUIPMENT':
                 for i in range(len(row)):
                     match str(row[i].value):
@@ -184,16 +189,16 @@ def findSpecs(msgLabel):
                     msgLabel.config(text="ERROR: The following header(s) are missing from the input file: " + ", ".join(tempStr))
                     return
             continue
-
+            ############################################################################
         #Test that "might" catch wrong input files
         try:
-            nothing = row[1].value == None or "spare" in str(row[4].value).lower()
+            nothing = row[hDict['qty']].value == None or "spare" in str(row[hDict['description']].value).lower()
         except:
             msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
             return
         
         #Skip if location header, spare number, existing item, or by OS&E/Manufacturer/etc.
-        if row[1].value == None or "spare" in str(row[4].value).lower() or (row[5].value != None and ("by" in str(row[5].value).lower() or "exist" in str(row[5].value).lower())):
+        if row[hDict['qty']].value == None or "spare" in str(row[hDict['description']].value).lower() or (row[hDict['remarks']].value != None and ("by" in str(row[hDict['remarks']].value).lower() or "exist" in str(row[hDict['remarks']].value).lower())):
             continue
 
         #Collect Name, Manufacturer, and Model No. for finding/matching a Spec ".docx" file
@@ -201,11 +206,11 @@ def findSpecs(msgLabel):
             ambiguousModels = ["custom", "custom design"]#Non-Unique Model No's
             specData = []
             #Manually fill field for custom fab
-            if row[headerIndexes[0]+5].value != None and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value).upper():
-                specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
+            if row[hDict['remarks']].value != None and "CUSTOM FABRICATION" in str(row[hDict['remarks']].value).upper():
+                specData = [row[hDict['description']].value, "Custom Fabrication", ""]
             #or Fill fields with Excel values
             else:
-                specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
+                specData = [row[hDict['description']].value, row[hDict['manuf.']].value, str(row[hDict['model']].value).replace('/', '-').replace('|','-')]
 
             #Add row to doc specific Excel file (Name, Manufacturer, Model No., Expected ".docx" filename)
             newSheet.append([specData[0], specData[1], specData[2], ''])
@@ -261,7 +266,6 @@ def findSpecs(msgLabel):
                         else:
                             bestMatch = closestMatch(specData[2], matches, 1)
                         newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + bestMatch[2] + "]\",\""+bestMatch[2].split('/')[len(bestMatch[2].split('/'))-1].split('.docx')[0] +"\")"
-                        print(str(specData[2]) + ":" + str(bestMatch) + ":" + str(matches))
                     else:
                         newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][2] + "]\",\""+ matches[0][2].split('/')[len(matches[0][2].split('/'))-1].split('.docx')[0] +"\")"
                     for i in range(0,4):
@@ -331,6 +335,8 @@ def writeSpecs(msgLabel, units):
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
 
+    
+
     #If there's a ref sheet, copy item information for later searching
     if excelFilepath:
         refSheet = wbr.active
@@ -358,13 +364,31 @@ def writeSpecs(msgLabel, units):
                 else:
                     #print("True")
                     specRefs[4].append(True)
-    
+
+    hDict = FindHeaders.FindHeaders(inputFilepath)
+    missing = [] #Holds all headers which were not found
+
+    #Headers that get used for making specs/spec headers for imperial and metric units respectively
+    headers = ['description','qty','manuf.','equipment', 'remarks', 'model', 'hgt._','cw', 'd.w.', 'connection load','voltage', 'phase', 'comments__', 'cfm', 'cfm_', 'hw', 'waste', 'size_', 'in size', 'out size', 'btu\'s','w.c.']
+    metricHeaders = ['description', 'qty', 'manuf.', 'equipment','remarks', 'model', 'hgt. (mm)_', 'cw (mm)','d.w. (mm)', 'connection load', 'voltage', 'phase', 'comments__','m^3/h','m^3/h_','hw (mm)','waste','size (mm)_','in (mm)', 'out (mm)', 'kw', 'mbar']
+    if not metric:        
+        for head in headers:
+            if head not in hDict:
+                missing.append(head)
+    else:
+        for head in metricHeaders:
+            if head not in hDict:
+                missing.append(head)
+    if missing:
+        msgLabel.config(text="The following header(s) are missing: " + ", ".join(missing))
+        return
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
+        ############################### REMOVE #############################
         #Find header locations
-        if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':
+        if row[hDict['equipment']].value == None or row[hDict['equipment']].value == 'NO' or row[hDict['equipment']].value == 'EQUIPMENT':
             #If first row, get header indexes, or skip if no item information available
-            if row[0].value == 'EQUIPMENT':
+            if row[hDict['equipment']].value == 'EQUIPMENT':
                 for i in range(len(row)):
                     match str(row[i].value):
                         case "EQUIPMENT":
@@ -393,7 +417,7 @@ def writeSpecs(msgLabel, units):
             
 
         #Add section header (location/area)
-        elif row[1].value == None:
+        elif row[hDict['qty']].value == None:
             p = doc.add_paragraph('', style = 'Spec_Header')
             p.alignment = 1
             p.add_run(row[0].value + "\n").bold = True
@@ -413,50 +437,50 @@ def writeSpecs(msgLabel, units):
             run = "" #To hold all text for each header
             
             #Item Number and Description
-            run = run + ("ITEM #" + str(row[headerIndexes[0]].value) + ":")
-            run = run + ("\t" + str(row[headerIndexes[0]+4].value))
+            run = run + ("ITEM #" + str(row[hDict['equipment']].value) + ":")
+            run = run + ("\t" + str(row[hDict['description']].value))
 
             #Maybe catches incorrect file related errors
             try:
-                row[headerIndexes[0]+5].value != None
-                "SPARE NUMBER" in str(row[headerIndexes[0]+4].value)
+                row[hDict['remarks']].value != None
+                "SPARE NUMBER" in str(row[hDict['remarks']].value)
             except:
                 msgLabel.config(text="Error: Specs Not Found. Please check input file is correct.")
                 return
 
             #Check if not in contract
-            if row[headerIndexes[0]+5].value != None and ("by vendor" in str(row[headerIndexes[0]+5].value).lower() or "by os&e" in str(row[headerIndexes[0]+5].value).lower() or "by general contractor" in str(row[headerIndexes[0]+5].value).lower() or "by owner" in str(row[headerIndexes[0]+5].value).lower() or "by mep" in str(row[headerIndexes[0]+5].value).lower()):
+            if row[hDict['remarks']].value != None and ("by vendor" in str(row[hDict['remarks']].value).lower() or "by os&e" in str(row[hDict['remarks']].value).lower() or "by general contractor" in str(row[hDict['remarks']].value).lower() or "by owner" in str(row[hDict['remarks']].value).lower() or "by mep" in str(row[hDict['remarks']].value).lower()):
                 run = run + " (NOT IN CONTRACT)"
         
             #Check if existing equipment
-            if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
+            if row[hDict['remarks']].value != None and "EXIST" in str(row[hDict['remarks']].value):
                 run = run + " (EXISTING EQUIPMENT)"
             
             #Highlight if shelving unit    
-            if "shelv" in str(row[headerIndexes[0]+4].value).lower():
+            if "shelv" in str(row[hDict['description']].value).lower():
                 r = p.add_run(run)
                 run = ""
                 r.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
         
             #Skip rest if Spare Number
-            if "SPARE NUMBER" in str(row[headerIndexes[0]+4].value):
+            if "SPARE NUMBER" in str(row[hDict['description']].value):
                 p.add_run(run)
                 continue
 
             #Quantity
             run = run + ("\nQuantity:\t")
             try:
-                run = run + (n2m.num2words(row[headerIndexes[0]+1].value).capitalize() + " (" + str(row[headerIndexes[0]+1].value) + ")")
+                run = run + (n2m.num2words(row[hDict['qty']].value).capitalize() + " (" + str(row[hDict['qty']].value) + ")")
             except:
-                run = run + str(row[headerIndexes[0]+1].value)
+                run = run + str(row[hDict['qty']].value)
                 
             #If not in contract, add pert. data
-            if type(row[headerIndexes[0]+5].value) == str and ("by mep" in row[headerIndexes[0]+5].value.lower() or "by vendor" in row[headerIndexes[0]+5].value.lower() or "by os&e" in row[headerIndexes[0]+5].value.lower() or "by general contractor" in row[headerIndexes[0]+5].value.lower() or "by owner" in row[headerIndexes[0]+5].value.lower()):
+            if type(row[hDict['remarks']].value) == str and ("by mep" in row[hDict['remarks']].value.lower() or "by vendor" in row[hDict['remarks']].value.lower() or "by os&e" in row[hDict['remarks']].value.lower() or "by general contractor" in row[hDict['remarks']].value.lower() or "by owner" in row[hDict['remarks']].value.lower()):
                 run = run+ ("\nPertinent Data:\t")
-                if(row[headerIndexes[0]+5].value == None):
+                if(row[hDict['remarks']].value == None):
                     run = run + add_run("---")
                 else:
-                    run = run + (str(row[headerIndexes[0]+5].value))
+                    run = run + (str(row[hDict['remarks']].value))
                 p.add_run(run)
                 continue
         
@@ -466,29 +490,29 @@ def writeSpecs(msgLabel, units):
             customFab = False
             
             #Check if custom fab
-            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in str(row[headerIndexes[0]+5].value).upper()):
+            if(type(row[hDict['remarks']].value) == str and "CUSTOM FABRICATION" in str(row[hDict['remarks']].value).upper()):
                 run = run + "Custom Fabrication"
                 customFab=True
             else:
-                if(row[headerIndexes[0]+2].value == None):
+                if(row[hDict['manuf.']].value == None):
                     run = run + ("---")
                 else:
-                    run = run + (str(row[headerIndexes[0]+2].value))
+                    run = run + (str(row[hDict['manuf.']].value))
         
             #Model Number
             run = run + ("\nModel No.:\t")
-            if(row[headerIndexes[0]+3].value == None):
+            if(row[hDict['model']].value == None):
                 run = run + ("---")
             else: 
-                run = run + (str(row[headerIndexes[0]+3].value))
+                run = run + (str(row[hDict['model']].value))
 
 
             #Pertinent Data
             run = run + ("\nPertinent Data:\t")
         
             #Remove "Custom Fabrication" from pert. data
-            if(type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value.upper()):
-                temp = "".join(re.split("custom fabrication", row[headerIndexes[0]+5].value, flags=re.IGNORECASE))
+            if(type(row[hDict['remarks']].value) == str and "CUSTOM FABRICATION" in row[hDict['remarks']].value.upper()):
+                temp = "".join(re.split("custom fabrication", row[hDict['remarks']].value, flags=re.IGNORECASE))
                 #run = run + temp
                 #"See Plans, Drawing #___ "
                 if ", " in temp:
@@ -496,31 +520,34 @@ def writeSpecs(msgLabel, units):
                 else:
                     run = run + "See Plans, Drawing #___ "
             else:
-                if(row[headerIndexes[0]+5].value == None):
+                if(row[hDict['remarks']].value == None):
                     run = run + ("---")
                 else:
-                    run = run + (str(row[headerIndexes[0]+5].value))
-        
+                    run = run + (str(row[hDict['remarks']].value))
+
             #Utilities
             run = run + ("\nUtilities Req'd:\t")
             is_empty = True
 
-                #Plumbing    
-            if(row[headerIndexes[2]+9].value != None and str(row[headerIndexes[2]+9].value)[0] == "-" and row[headerIndexes[2]+4].value == None):
-                if metric and ("mm" not in str(row[headerIndexes[2]+8].value)):
+                #Plumbing
+            #
+            if not metric: 
+                if(row[hDict['hgt._']].value != None and str(row[hDict['hgt._']].value)[0] == "-" and row[hDict['cw']].value == None):
+                    run = run + (str(row[hDict['d.w.']].value) + " drain recessed " + str(row[hDict['hgt._']].value)[1:])
+                    is_empty = False
+            else:
+                if (row[hDict['hgt. (mm)_']].value != None and str(row[hDict['hgt. (mm)_']].value)[0] == "-" and row[hDict['cw (mm)']].value == None) and ("mm" not in str(row[headerIndexes[2]+8].value)):
                     run = run + (str(row[headerIndexes[2]+8].value) + "mm drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
-                else:
-                    run = run + (str(row[headerIndexes[2]+8].value) + " drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
-                is_empty = False
+                    is_empty = False
         
                 #Electrical
-            if(row[headerIndexes[3]+3].value != None):
-                a=str(row[headerIndexes[3]+3].value).split("_x000D_\n")
-                v=str(row[headerIndexes[3]+4].value).split("_x000D_\n")
-                ph=str(row[headerIndexes[3]+5].value).split("_x000D_\n")
+            if(row[hDict['connection load']].value != None):
+                a=str(row[hDict['connection load']].value).split("_x000D_\n")
+                v=str(row[hDict['voltage']].value).split("_x000D_\n")
+                ph=str(row[hDict['phase']].value).split("_x000D_\n")
                 c=None
-                if(row[headerIndexes[3]+6].value != None):
-                    c=str(row[headerIndexes[3]+6].value).split("_x000D_\n")
+                if(row[hDict['comments__']].value != None):
+                    c=str(row[hDict['comments__']].value).split("_x000D_\n")
                 for i in range(len(a)):
                     if not is_empty:
                         run = run + "; "
@@ -537,84 +564,120 @@ def writeSpecs(msgLabel, units):
                     if (c != None):
                         if i<len(c):
                             run = run + " (" + str(c[i]) + ")"
-                    is_empty = False
+                is_empty = False
             
                 #Ventilation
             cfm = [] 
-
-            if row[headerIndexes[1]+3].value != None:
-                if metric:
-                    unit = " M^3/H"
-                else:
-                    unit = " CFM"
-                if type(row[headerIndexes[1]+3].value) == int:
-                    cfm.append(str(row[headerIndexes[1]+3].value)+ unit + " Exhaust")
-                else:
-                    values = str("".join(str(row[headerIndexes[1]+3].value).split("_x000D_"))).split()
+            if not metric:
+                unit = " CFM"
+                if row[hDict['cfm']].value != None:
+                    if type(row[hDict['cfm']].value) == int:
+                        cfm.append(str(row[hDict['cfm']].value)+ unit + " Exhaust")
+                    else:
+                        values = str("".join(str(row[hDict['cfm']].value).split("_x000D_"))).split()
+                        if values.count(values[0]) == len(values):
+                            cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Exhaust")
+                        else:
+                            for value in values:
+                                cfm.append(value[:4] + unit +" Exhaust")
+                if type(row[hDict['cfm_']].value) == str:
+                    values = str("".join(str(row[hDict['cfm_']].value).split("_x000D_"))).split()
                     print(values)
                     if values.count(values[0]) == len(values):
-                        cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Exhaust")
+                        cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Supply")
                     else:
                         for value in values:
-                            cfm.append(value[:4] + unit +" Exhaust")
+                            cfm.append(value[:4] + unit +" Supply")
+            else:
+                unit = " M^3/H"
+                if row[hDict['m^3/h']].value != None:
+                    if type(row[hDict['m^3/h']].value) == int:
+                        cfm.append(str(row[hDict['m^3/h']].value)+ unit + " Exhaust")
+                    else:
+                        values = str("".join(str(row[hDict['m^3/h']].value).split("_x000D_"))).split()
+                        if values.count(values[0]) == len(values):
+                            cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Exhaust")
+                        else:
+                            for value in values:
+                                cfm.append(value[:4] + unit +" Exhaust")
 
-            if type(row[headerIndexes[1]+6].value) == str:
-                values = str("".join(str(row[headerIndexes[1]+3].value).split("_x000D_"))).split()
-                print(values)
-                if values.count(values[0]) == len(values):
-                    cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Supply")
-                else:
-                    for value in values:
-                        cfm.append(value[:4] + unit +" Supply")
+                if type(row[hDict['m^3/h_']].value) == str:
+                    values = str("".join(str(row[hDict['m^3/h_']].value).split("_x000D_"))).split()
+                    print(values)
+                    if values.count(values[0]) == len(values):
+                        cfm.append("(" + str(values.count(values[0])) + ")" + values[0] + unit +" Supply")
+                    else:
+                        for value in values:
+                            cfm.append(value[:4] + unit +" Supply")
         
             if cfm:
                 if not is_empty:
                     run = run + "; "
                 run = run + ", ".join(cfm)
                 is_empty = False
-
+                
             tempList = []
         
                 #Plumbing (but more)   
                 #Water
-            if row[headerIndexes[2]+4].value != None:
-                if("_x000D_" in str(row[headerIndexes[2]+4].value)):
-                    temp = row[headerIndexes[2]+4].value.split("_x000D_")
-                    if "\n" in "".join(temp):
-                        temp = "".join(temp).split("\n")
-                    print(temp)
-                    if metric and "mm" not in temp[0]:
-                        if temp.count(temp[0]) == len(temp):
-                            tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + "mm CW")
+
+            if metric:
+                if row[hDict['cw (mm)']].value != None:
+                    if ("_x000D_" in str(row[hDict['cw (mm)']].value)):
+                        temp = row[hDict['cw (mm)']].value.split("_x000D_")
+                        if '\n' in "".join(temp):
+                            temp = "".join(temp).split("\n")
+                        if 'mm' not in temp[0]:
+                            if temp.count(temp[0]) == len(temp):
+                                tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + "mm CW")
+                            else:
+                                tempList.append(", ".join(temp) + "mm CW")
                         else:
-                            tempList.append(", ".join(temp) + "mm CW")
+                            if temp.count(temp[0]) == len(temp):
+                                tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + " CW")
+                            else:
+                                tempList.append(", ".join(temp) + " CW")
                     else:
+                        tempList.append(str(row[hDict['cw (mm)']].value) + " CW")
+            else:
+                if row[hDict['cw']].value != None:
+                    if("_x000D_" in str(row[hDict['cw']].value)):
+                        temp = row[hDict['cw']].value.split("_x000D_")
+                        if "\n" in "".join(temp):
+                            temp = "".join(temp).split("\n")
                         if temp.count(temp[0]) == len(temp):
                             tempList.append("(" + str(temp.count(temp[0])) + ") " + temp[0] + " CW")
                         else:
                             tempList.append(", ".join(temp) + " CW")
-                else:
-                    if metric and "mm" not in str(row[headerIndexes[2]+4].value):
-                        tempList.append(str(row[headerIndexes[2]+4].value) + "mm CW")
                     else:
-                        tempList.append(str(row[headerIndexes[2]+4].value) + " CW")
-            if row[headerIndexes[2]+5].value != None:
-                if metric and "mm" not in str(row[headerIndexes[2]+5].value):
-                    tempList.append(str(row[headerIndexes[2]+5].value) + "mm HW")
-                else:
-                    tempList.append(str(row[headerIndexes[2]+5].value) + " HW")
-        
+                        tempList.append(str(row[hDict['cw']].value) + " CW")
+
+            if metric:
+                if row[hDict['hw (mm)']].value != None:
+                    if "mm" not in str(row[hDict['hw (mm)']].value):
+                        tempList.append(str(row[hDict['hw (mm)']].value) + "mm HW")
+                    else:
+                        tempList.append(str(row[hDict['hw (mm)']].value) + " HW")
+            else:
+                if row[hDict['hw']].value != None:
+                    tempList.append(str(row[hDict['hw']].value) + " HW")
+                    
                 #Waste
-            if row[headerIndexes[2]+7].value != None:
-                if metric and "mm" not in str(row[headerIndexes[2]+7].value):
-                    tempList.append(str(row[headerIndexes[2]+7].value) + "mm IW")
+            if row[hDict['waste']].value != None:
+                if metric and "mm" not in str(row[hDict['waste']].value):
+                    tempList.append(str(row[hDict['waste']].value) + "mm IW")
                 else:
-                    tempList.append(str(row[headerIndexes[2]+7].value) + " IW")
-            if row[headerIndexes[2]+8].value != None and tempList:
-                if metric and "mm" not in str(row[headerIndexes[2]+8].value):
-                    tempList.append(str(row[headerIndexes[2]+8].value) + "mm DW")
-                else:
-                    tempList.append(str(row[headerIndexes[2]+8].value) + " DW")
+                    tempList.append(str(row[hDict['waste']].value) + " IW")
+
+            if metric:                                    
+                if row[hDict['d.w. (mm)']].value != None and tempList:
+                    if "mm" not in str(row[hDict['d.w. (mm)']].value):
+                        tempList.append(str(row[hDict['d.w. (mm)']].value) + "mm DW")
+                    else:
+                        tempList.append(str(row[hDict['d.w. (mm)']].value) + " DW")
+            else:
+                if row[hDict['d.w.']].value != None and tempList:
+                    tempList.append(str(row[hDict['d.w.']].value) + " DW")
             
 
             if not is_empty and tempList:
@@ -626,28 +689,39 @@ def writeSpecs(msgLabel, units):
                 is_empty = False
 
                 #Gas
-            if row[headerIndexes[2]+11].value != None:
-                if not is_empty:
-                    run = run + "; "
-                if metric:
-                    run = run + str(row[headerIndexes[2]+11].value) + "mm LP Gas @ " + str(row[headerIndexes[2]+12].value) + " KW "
-                    if row[headerIndexes[2]+13].value != None:
-                        run = run + "; "+ str(row[headerIndexes[2]+13].value) + " mbar"
-                else:
-                    run = run + str(row[headerIndexes[2]+11].value) + " Gas @ " + str(row[headerIndexes[2]+12].value) + " BTU; " + str(row[headerIndexes[2]+13].value) + " WC"
-                is_empty = False
-    
-                #Chilled Water
-            if row[headerIndexes[2]+16].value != None:
-                if not is_empty:
-                    run = run + "; "
-                else:
+            if metric:
+                if row[hDict['size (mm)_']].value != None:
+                    if not is_empty:
+                        run = run + "; "
+                    run = run + str(row[hDict['size (mm)_']].value) + "mm LP Gas @ " + str(row[hDict['kw']].value) + " KW "
+                    if row[hDict['mbar']].value != None:
+                        run = run + "; " + str(row[hDict['mbar']].value) + " mbar"
                     is_empty = False
-                if metric and "mm" not in str(row[headerIndexes[2]+15].value):
-                    run = run + str(row[headerIndexes[2]+15].value) + "mm Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + "mm Chilled Water Return"
-                else:
-                    run = run + str(row[headerIndexes[2]+15].value) + " Chilled Water Supply, " + str(row[headerIndexes[2]+16].value) + " Chilled Water Return"
-
+            else:
+                if row[hDict['size_']].value != None:
+                    if not is_empty:
+                        run = run + "; "
+                    run = run + str(row[hDict['size_']].value) + " Gas @ " + str(row[hDict['btu\'s']].value) + " BTU; " + str(row[hDict['w.c.']].value) + " WC"
+                    is_empty = False
+       
+                #Chilled Water
+            if metric:
+                if row[hDict['out (mm)']].value != None:
+                    if not is_empty:
+                        run = run + "; "
+                    else:
+                        is_empty = False
+                    if 'mm' not in str(row[hDict['in (mm)']].value):
+                        run = run + str(row[hDict['in (mm)']].value) + "mm Chilled Water Supply, " + str(row[hDict['out (mm)']].value) + "mm Chilled Water Return"
+                    else:
+                        run = run + str(row[hDict['in (mm)']].value) + " Chilled Water Supply, " + str(row[hDict['out (mm)']].value) + " Chilled Water Return"
+            else:
+                if row[hDict['out size']].value != None:
+                    if not is_empty:
+                        run = run + "; "
+                    else:
+                        is_empty = False
+                    run = run +str(row[hDict['in size']].value) + " Chilled Water Supply, " + str(row[hDict['out size']].value) + " Chilled Water Return"
         
             if is_empty:
                 run = run +("---")
@@ -660,13 +734,13 @@ def writeSpecs(msgLabel, units):
             #Make/find specs for item
 #SPECS BODY            
             #Existing Items Specs
-            if row[headerIndexes[0]+5].value != None and "EXIST" in str(row[headerIndexes[0]+5].value):
+            if row[hDict['remarks']].value != None and "EXIST" in str(row[hDict['remarks']].value):
                             
                 p = doc.add_paragraph('', style = 'Spec_Header')
-                remaining = (row[headerIndexes[0]+5].value != None and "REMAIN" in str(row[headerIndexes[0]+5].value))           
+                remaining = (row[hDict['remarks']].value != None and "REMAIN" in str(row[hDict['remarks']].value))           
                 name = ""
-                if row[headerIndexes[0]+4].value != None:
-                    name = row[headerIndexes[0]+4].value.lower()
+                if row[hDict['description']].value != None:
+                    name = row[hDict['description']].value.lower()
                 specText = ""
                 if(remaining):
                     specText = specText + "Remain in place existing unit as follows:\n"
@@ -701,16 +775,16 @@ def writeSpecs(msgLabel, units):
                     con=sqlite3.connect("specsDB.db")
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
                     con.commit()
                 cur = con.cursor()
                 specData = []
                 #Manually fill field for custom fab
-                if type(row[headerIndexes[0]+5].value) == str and "CUSTOM FABRICATION" in row[headerIndexes[0]+5].value.upper():
-                    specData = [row[headerIndexes[0]+4].value, "Custom Fabrication", ""]
+                if type(row[hDict['remarks']].value) == str and "CUSTOM FABRICATION" in row[hDict['remarks']].value.upper():
+                    specData = [row[hDict['description']].value, "Custom Fabrication", ""]
                 #Fill fields with Excel values
                 else:
-                    specData = [row[headerIndexes[0]+4].value, row[headerIndexes[0]+2].value, str(row[headerIndexes[0]+3].value).replace('/', '-').replace('|','-')]
+                    specData = [row[hDict['description']].value, row[hDict['manuf.']].value, str(row[hDict['model']].value).replace('/', '-').replace('|','-')]
                 
                 matches = []
                 if specData[1] == "Custom Fabrication":
@@ -792,31 +866,31 @@ def writeSpecs(msgLabel, units):
                     con=sqlite3.connect("specsDB.db")
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
                     con.commit()
                 cur = con.cursor()
                 #if specs exist, copy and paste    
-                if (row[headerIndexes[0]+3].value != None and str(row[headerIndexes[0]+3].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())]
-                      and str(row[headerIndexes[0]+3].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] != "":
+                if (row[hDict['model']].value != None and str(row[hDict['model']].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[hDict['model']].value).lower())]
+                      and str(row[hDict['model']].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())] != "":
                     #print("An Exact Match")
-                    if -1 == copySpecs(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur) and specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())] not in broken:
-                        broken.append(specRefs[3][specRefs[2].index(str(row[headerIndexes[0]+3].value).lower())])
+                    if -1 == copySpecs(specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur) and specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())] not in broken:
+                        broken.append(specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())])
                     
                 # If Manufacturer and Desc. match, copy specs
-                elif (row[headerIndexes[0]+4].value != None and str(row[headerIndexes[0]+4].value).lower() in specRefs[0]):
+                elif (row[hDict['description']].value != None and str(row[hDict['description']].value).lower() in specRefs[0]):
                     manuf = ""
                     #Check if specs exist for matching Manufacturer and Desc.
-                    if(row[headerIndexes[0]+2].value != None and str(row[headerIndexes[0]+2].value).lower() in specRefs[1]):
-                        manuf = str(row[headerIndexes[0]+2].value).lower()
+                    if(row[hDict['manuf.']].value != None and str(row[hDict['manuf.']].value).lower() in specRefs[1]):
+                        manuf = str(row[hDict['manuf.']].value).lower()
                     #Check if specs for custom fabrication item exists
-                    elif(row[headerIndexes[0]+5].value != None and "custom fabrication" in str(row[headerIndexes[0]+5].value).lower()):
+                    elif(row[hDict['remarks']].value != None and "custom fabrication" in str(row[hDict['remarks']].value).lower()):
                         manuf = "custom fabrication"
                     #If neither, skip
                     else:
                         continue
                     #Find specs which match for given item
                     for index in [i for i,e in enumerate(specRefs[1]) if e == manuf]:
-                        if index in [j for j,s in enumerate(specRefs[0]) if s == str(row[headerIndexes[0]+4].value).lower()]: 
+                        if index in [j for j,s in enumerate(specRefs[0]) if s == str(row[hDict['description']].value).lower()]: 
                             if(specRefs[3][index] == ""):
                                 continue
                             #Copy and paste from associated doc and highlighting from spec ref sheet
@@ -1149,7 +1223,7 @@ def DBWindow():
         con=sqlite3.connect("specsDB.db")
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
         con.commit()
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()

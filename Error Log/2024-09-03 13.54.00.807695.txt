@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 1264, in <lambda>
+    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel, var.get()))
+                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 807, in writeSpecs
+    if (row[hDict['model']].value != None and str(row[hDict['model']].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[hDict['model']].value).lower())]
+                                                                                                                                                    ^^^^^
+NameError: name 'model' is not defined
