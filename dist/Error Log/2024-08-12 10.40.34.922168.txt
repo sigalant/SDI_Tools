@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "tkinter\__init__.py", line 1968, in __call__
-  File "BudgetingTool.py", line 335, in formatFile
-ValueError: could not convert string to float: 'vjkfjh'
