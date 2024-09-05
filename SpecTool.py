@@ -125,7 +125,7 @@ def findSpecs(msgLabel):
         con=sqlite3.connect("specsDB.db")
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
         con.commit()
 
         #TODO: Make empty tables and commit 
@@ -701,7 +701,7 @@ def writeSpecs(msgLabel, units):
                     con=sqlite3.connect("specsDB.db")
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
                     con.commit()
                 cur = con.cursor()
                 specData = []
@@ -792,7 +792,7 @@ def writeSpecs(msgLabel, units):
                     con=sqlite3.connect("specsDB.db")
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+                    cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
                     con.commit()
                 cur = con.cursor()
                 #if specs exist, copy and paste    
@@ -1149,7 +1149,7 @@ def DBWindow():
         con=sqlite3.connect("specsDB.db")
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
-        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modifiedTime)")
+        cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
         con.commit()
     cur = con.cursor()
     entries = cur.execute("SELECT * FROM item").fetchall()
