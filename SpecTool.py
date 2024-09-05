@@ -1,29 +1,26 @@
 #SDI Specs Formatting Tool
 
 #Imports
-import LogErrors
-import FindHeaders
-import SpecDB as db
-import sqlite3
-from fast_edit_distance import edit_distance
-
-import docx as d
-import openpyxl as opx
-import num2words as n2m
-import re
-
-import sys
-import traceback
-
-import tkinter as tk
-from tkinter import filedialog,ttk
-from PIL import Image, ImageTk
-
-import time 
-
 import os
 from os import listdir
 from os.path import isfile, join
+import sqlite3
+import re
+import sys
+import traceback
+import time 
+import tkinter as tk
+from tkinter import filedialog,ttk
+
+from fast_edit_distance import edit_distance
+import docx as d
+import openpyxl as opx
+import num2words as n2m
+from PIL import Image, ImageTk
+
+import LogErrors
+import FindHeaders
+import SpecDB as db
 
 
 #input/output locations
@@ -41,7 +38,7 @@ menubar = tk.Menu()
 menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
 root.config(menu=menubar)
 
-#Catch unhandled errors and report them
+#Catch unhandled errors and log them
 def handle_exception(exc,val,tb):
     top=tk.Toplevel(root)
     top.geometry("800x400")
@@ -99,11 +96,10 @@ def copySpecs(tempDocPath, p, highlight, cur):
                 b=int(specText[j+1][4:6],16)
                 colorRun.font.color.rgb = d.shared.RGBColor(r,g,b)
                 j = j+1
-            except:
+            except Exception:
                 pass
             if highlight:
                 colorRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
-            #j= j+1
         j=j+1
 
 #Get selected item from treeview and copy filepath (into chosenSpec) then destroy popup window
@@ -145,51 +141,18 @@ def findSpecs(msgLabel):
     wbNew = opx.Workbook()
     newSheet = wbNew.active
     sheet = wb.active
-    headerIndexes = [-1,-1,-1,-1]
+    
     
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
     noFill = opx.styles.PatternFill(start_color = 'FFFFFF', end_color = 'FFFFFF', fill_type = 'solid')
 
     hDict = FindHeaders.FindHeaders(inputFilepath)
-    print(hDict)
+    headers = ['qty','description','remarks','manuf.','model']
     
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
 
-        
-        #Find header locations
-        if row[0].value == None or row[0].value == 'NO' or row[0].value == 'EQUIPMENT':  
-            #################### POO POO GARBAGE STINKY TRASH ##########################
-            if row[0].value == 'EQUIPMENT':
-                for i in range(len(row)):
-                    match str(row[i].value):
-                        case "EQUIPMENT":
-                            headerIndexes[0] = i
-                        case "VENTILATION":
-                            headerIndexes[1] = i
-                        case "PLUMBING":
-                            headerIndexes[2] = i
-                        case "ELECTRICAL":
-                            headerIndexes[3] = i
-                        case _:
-                            pass
-
-                if -1 in headerIndexes:
-                    tempStr = [] 
-                    if headerIndexes[0] == -1:
-                        tempStr.append("EQUIPMENT")
-                    if headerIndexes[1] == -1:
-                        tempStr.append("VENTILATION")
-                    if headerIndexes[2] == -1:
-                        tempStr.append("PLUMBING")
-                    if headerIndexes[3] == -1:
-                        tempStr.append("ELECTRICAL")
-                            
-                    msgLabel.config(text="ERROR: The following header(s) are missing from the input file: " + ", ".join(tempStr))
-                    return
-            continue
-            ############################################################################
         #Test that "might" catch wrong input files
         try:
             nothing = row[hDict['qty']].value == None or "spare" in str(row[hDict['description']].value).lower()
@@ -226,9 +189,9 @@ def findSpecs(msgLabel):
             #If there was a match, add a link to the xlsx file
             if matches:
 
-                if len(matches) > 1:
-                    #TODO: Copy choice popup here
-                    pass
+                #if len(matches) > 1:
+                #    #TODO: Copy choice popup here
+                #    pass
                 
                 newSheet[rowIndex][3].value = "=HYPERLINK(\"[" + matches[0][0] + "]\",\""+ matches[0][0].split('/')[len(matches[0][0].split('/'))-1].split('.docx')[0] +"\")"
                 for i in range(0,4):
@@ -304,13 +267,7 @@ def writeSpecs(msgLabel, units):
     doc = d.Document("V:\\Specs\\Specs Script\\Template Specs_Word Files\\Style_Template.docx")
     
     doc_styles = doc.styles
-    '''
-    #Maybe use one of the existing styles here...
-    header_style = doc_styles.add_style('Spec_Header', d.enum.style.WD_STYLE_TYPE.PARAGRAPH)
-    header_font = header_style.font
-    header_font.size = d.shared.Pt(10)
-    header_font.name = 'Univers LT Std 55'
-    '''
+    
     msgLabel.config(text="Working...")
 
     #Open Revit output
@@ -331,7 +288,6 @@ def writeSpecs(msgLabel, units):
     except:
         print("The Excel File was not found... But that's OK")
         excelFilepath = ""
-    headerIndexes = [-1,-1,-1,-1] #Holds index values for [Equipment, Ventilation, Plumbing, Electrical] Respectively from Revit output
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
 
@@ -536,8 +492,8 @@ def writeSpecs(msgLabel, units):
                     run = run + (str(row[hDict['d.w.']].value) + " drain recessed " + str(row[hDict['hgt._']].value)[1:])
                     is_empty = False
             else:
-                if (row[hDict['hgt. (mm)_']].value != None and str(row[hDict['hgt. (mm)_']].value)[0] == "-" and row[hDict['cw (mm)']].value == None) and ("mm" not in str(row[headerIndexes[2]+8].value)):
-                    run = run + (str(row[headerIndexes[2]+8].value) + "mm drain recessed " + str(row[headerIndexes[2]+9].value)[1:])
+                if (row[hDict['hgt. (mm)_']].value != None and str(row[hDict['hgt. (mm)_']].value)[0] == "-" and row[hDict['cw (mm)']].value == None) and ("mm" not in str(row[hDict['hgt. (mm)_']].value)):
+                    run = run + (str(row[hDict['hgt. (mm)_']].value) + "mm drain recessed " + str(row[hDict['cw (mm)']].value)[1:])
                     is_empty = False
         
                 #Electrical

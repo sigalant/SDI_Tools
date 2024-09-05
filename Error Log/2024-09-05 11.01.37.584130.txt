@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\AppData\Local\Programs\Python\Python312\Lib\idlelib\run.py", line 580, in runcode
+    exec(code, self.locals)
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 5, in <module>
+    import FindHeaders
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\FindHeaders.py", line 1, in <module>
+    import openpyxl as opx
+ModuleNotFoundError: No module named 'openpyxl'
