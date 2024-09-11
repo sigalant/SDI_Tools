@@ -12,6 +12,13 @@ import os
 import FindHeaders
 #sys.excepthook = LogErrors.handle_exception
 
+def resource_path(rel_path):
+    try:
+        base_path = sys.MEIPASS
+    except Exception:
+        base_path = os.path.abspath("./_internal")
+    return os.path.join(base_path, rel_path)
+
 #Holds I/O filepaths
 inputFilepath = ""
 outputFilepath = ""
@@ -25,8 +32,8 @@ root.geometry("800x450")
 
 menubar = tk.Menu(root)
 helpMenu = tk.Menu(menubar, tearoff=0)
-helpMenu.add_command(label="Help", command = lambda:os.startfile('Help.html'))
-helpMenu.add_command(label="Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir='./Example Files')))
+helpMenu.add_command(label="Help", command = lambda:os.startfile(resource_path('Help.html')))
+helpMenu.add_command(label="Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir=resource_path('./Example Files'))))
 menubar.add_cascade(label="Help", menu=helpMenu)
 root.config(menu=menubar)
 
@@ -43,7 +50,7 @@ def handle_exception(exc,val,tb):
 
 root.report_callback_exception = handle_exception
 
-ico= Image.open("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.ico")
+ico= Image.open(resource_path("SDI_Logo.ico"))
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
@@ -215,7 +222,7 @@ def formatFile(voltList):
     sheetNew.column_dimensions['H'].width = 10
 
     
-    img = opx.drawing.image.Image("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.PNG")
+    img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
     img.height=40
     img.width=65
     sheetNew.add_image(img, "A1")
@@ -323,7 +330,7 @@ def tab_pressed(event):
         voltEntries[voltEntries.index(event.widget)+1].focus_set()
     else:
         voltEntries[0].focus_set()
-    return "break"
+    return "break" 
 
 #Add a new text box when the '+' button is pressed
 def addVolt(butts):

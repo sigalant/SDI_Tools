@@ -4,12 +4,8 @@
 a = Analysis(
     ['BulkLoads.py'],
     pathex=[],
-<<<<<<< HEAD:BulkLoads.spec
-    binaries=[('LogErrors.py', '.')],
-=======
-    binaries=[('SpecDB.py', '.')],
->>>>>>> SpecDB:SpecTool.spec
-    datas=[],
+    binaries=[],
+    datas=[('./data/shared/', '.'), ('./data/UtilityTool', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -36,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['data\\SDI_Logo.ico'],
+    icon=['data\\shared\\SDI_Logo.ico'],
 )
 coll = COLLECT(
     exe,
