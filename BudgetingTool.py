@@ -12,6 +12,18 @@ import LogErrors
 import os
 import FindHeaders
 
+try:
+    import pyi_splash
+except:
+    print("Not built with PyInstaller")
+
+
+def resource_path(rel_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, rel_path)
 
 #File Paths
 inputFilepath = ""
@@ -26,15 +38,15 @@ root = tk.Tk()
 root.title("SDI Budget Formatting Tool")
 root.geometry("800x500")
 
-ico = Image.open("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
+ico = Image.open(resource_path("SDI Logo.jpg"))
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
 #Help Menu
 menubar = tk.Menu(root)
 helpMenu = tk.Menu(menubar, tearoff=0)
-helpMenu.add_command(label="Help", command=lambda:os.startfile('Help.html'))
-helpMenu.add_command(label="Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+helpMenu.add_command(label="Help", command=lambda:os.startfile(resource_path('Help.html')))
+helpMenu.add_command(label="Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir=resource_path("./Example Files/"), filetypes=(("Example Documents", "*.xlsx *.docx"),))))
 menubar.add_cascade(label="Help", menu=helpMenu)
 root.config(menu=menubar)
 
@@ -390,5 +402,5 @@ in_file.pack(padx=10, pady=15, side=tk.LEFT)
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
 out_folder.pack(padx=10, pady=15, side=tk.LEFT)
 
-
+pyi_splash.close()
 root.mainloop()
