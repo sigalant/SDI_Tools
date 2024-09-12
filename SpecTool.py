@@ -23,6 +23,13 @@ import FindHeaders
 import SpecDB as db
 
 
+def resource_path(rel_path):
+    try:
+        base_path = sys.MEIPASS 
+    except Exception:
+        base_path = os.path.abspath('./_internal')
+    return os.path.join(base_path, rel_path)
+
 
 #input/output locations
 inputFilepath = ""
@@ -36,7 +43,7 @@ root.title("SDI Specs Formatting Tool")
 root.geometry("800x500")
 
 menubar = tk.Menu()
-menubar.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
+menubar.add_command(label = "Help", command = lambda:os.startfile(resource_path('Help.html')))
 root.config(menu=menubar)
 
 #Catch unhandled errors and log them
@@ -51,13 +58,10 @@ def handle_exception(exc,val,tb):
     LogErrors.handle_exception(exc,val,tb)
 root.report_callback_exception = handle_exception
 
-try:
-    ico = Image.open("V:\\Specs\\Specs Script\\SDI Logo.jpg")
-    photo = ImageTk.PhotoImage(ico)
-    root.wm_iconphoto(False, photo)
-except:
-    pass
-    #print("SDI Logo not found at: V:\\Specs\\Specs Script\\SDI Logo.jpg")
+
+ico = Image.open(resource_path("SDI Logo.jpg"))
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
@@ -118,10 +122,11 @@ def ChooseSpec(chosenSpec, popup, tv):
 #Find matching Specs for each item, and enter into .xlsx file highlighting partial matches and non-matches
 def findSpecs(msgLabel):
     con = None
+    dbPath = resource_path('specsDB.db')
     try:
-        con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+        con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
     except sqlite3.OperationalError:
-        con=sqlite3.connect("specsDB.db")
+        con=sqlite3.connect(dbPath)
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
         cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
@@ -255,7 +260,7 @@ def writeSpecs(msgLabel, units):
     broken = [] #Holds links from SpecRefSheet that couldn't be found in the database
     
     #Create doc and style
-    doc = d.Document("V:\\Specs\\Specs Script\\Template Specs_Word Files\\Style_Template.docx")
+    doc = d.Document(resource_path("Style_Template.docx"))
     
     doc_styles = doc.styles
     
@@ -304,7 +309,7 @@ def writeSpecs(msgLabel, units):
                         if '.docx' not in path: path = path + ".docx"
                         specRefs[3].append(path)
                 except:
-                    specRefs[3].append("Broken Hyperlink :(")
+                    specRefs[3].append("Broken Path :(")
                 if row[0].fill == yellowFill:
                     #print("False")
                     specRefs[4].append(False)
@@ -317,6 +322,7 @@ def writeSpecs(msgLabel, units):
     
     #Headers that get used for making specs/spec headers for imperial and metric units respectively
     #TODO: remove non-consequential headers from lists, and instead check for existence just before use (not every header MUST always be present)
+    #TODO: Decide for yourself if metric or imperial. Don't give the user so much power(responsibility)
     headers = ['description','qty','manuf.','equipment', 'remarks', 'model', 'hgt._','cw', 'd.w.', 'connection load','voltage', 'phase', 'comments__', 'cfm', 'cfm_', 'hw', 'waste', 'size_', 'in size', 'out size', 'btu\'s','w.c.']
     metricHeaders = ['description', 'qty', 'manuf.', 'equipment','remarks', 'model', 'hgt. (mm)_', 'cw (mm)','d.w. (mm)', 'connection load', 'voltage', 'phase', 'comments__','m^3/h','m^3/h_','hw (mm)','waste','size (mm)_','in (mm)', 'out (mm)', 'kw', 'mbar']
     if not metric:        
@@ -334,7 +340,7 @@ def writeSpecs(msgLabel, units):
     for row in sheet.rows:
         
         
-        #Find header locations
+        #Skip header rows
         if row[hDict['equipment']].value == None or row[hDict['equipment']].value == 'NO' or row[hDict['equipment']].value == 'EQUIPMENT':
             continue
         
@@ -724,10 +730,11 @@ def writeSpecs(msgLabel, units):
             #If excel sheet is not provided, search through DB for a match
             elif excelFilepath == "":
                 con = None #sqlite3.connect("specsDB.db")
+                dbPath = resource_path('specsDB.db')
                 try:
-                    con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+                    con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
                 except sqlite3.OperationalError:
-                    con=sqlite3.connect("specsDB.db")
+                    con=sqlite3.connect(dbPath)
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
                     cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
@@ -815,10 +822,11 @@ def writeSpecs(msgLabel, units):
             #If Spec Ref Sheet has been provided
             else:
                 con = None #sqlite3.connect("specsDB.db")
+                dbPath = resource_path('specsDB.db')
                 try:
-                    con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+                    con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
                 except sqlite3.OperationalError:
-                    con=sqlite3.connect("specsDB.db")
+                    con=sqlite3.connect(dbPath)
                     cur = con.cursor()
                     cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
                     cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
@@ -1126,8 +1134,8 @@ def selectionWindow():
     #Help Menu
     menubar = tk.Menu(root)
     helpMenu = tk.Menu(menubar, tearoff=0)
-    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
-    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile(resource_path('Help.html')))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir=resource_path("Example Files"))))
     menubar.add_cascade(label="Help",menu=helpMenu)
     root.config(menu=menubar)
         
@@ -1151,8 +1159,8 @@ def DBWindow():
 
     menubar = tk.Menu(root)
     helpMenu = tk.Menu(menubar, tearoff=0)
-    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
-    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile(resource_path('Help.html')))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir=resource_path("./Example Files"))))
     menubar.add_cascade(label="Help",menu=helpMenu)
     root.config(menu=menubar)
 
@@ -1172,10 +1180,11 @@ def DBWindow():
     treeview.tag_bind('tag?', "<Double-1>", lambda event, msg=messageBox:openFile(event, msg))
 
     con = None #sqlite3.connect("specsDB.db")
+    dbPath = resource_path("specsDB.db")
     try:
-        con=sqlite3.connect("file:specsDB.db?mode=rw", uri=True)
+        con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
     except sqlite3.OperationalError:
-        con=sqlite3.connect("specsDB.db")
+        con=sqlite3.connect(dbPath)
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
         cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
@@ -1240,8 +1249,8 @@ def wsWindow():
         
     menubar = tk.Menu(root)
     helpMenu = tk.Menu(menubar, tearoff=0)
-    helpMenu.add_command(label = "Help", command = lambda:os.startfile('Help.html'))
-    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir="./Example Files")))
+    helpMenu.add_command(label = "Help", command = lambda:os.startfile(resource_path('Help.html')))
+    helpMenu.add_command(label = "Examples", command = lambda:os.startfile(filedialog.askopenfilename(initialdir=resource_path("./Example Files"))))
     menubar.add_cascade(label="Help",menu=helpMenu)
     root.config(menu=menubar)
     backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
@@ -1284,39 +1293,6 @@ def wsWindow():
     
     submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel, var.get()))
     submitButton.grid(row=8, column = 3, pady = 20)
-
-#No longer being used
-#Create Window for Finding Specs Function
-def fsWindow():
-    for widget in root.winfo_children():
-        widget.destroy()
-        
-    backButton = tk.Button(root, text="<-", command=selectionWindow, bg = '#dadada')
-    backButton.grid(row=0, column=0, sticky = 'W', ipadx=15,ipady=5)
-
-    messageLabel = tk.Label(root, text="")
-    messageLabel.grid(row=6, column = 2, columnspan = 3)
-
-    padLabel = tk.Label(root, text="")
-    padLabel.grid(row=1,column=1, padx=80, pady=30)
-
-    infoLabel = tk.Label(root, text="Find Existing Specs")
-    infoLabel.grid(row=1, column=3, sticky= 'N')
-
-    inputButton = tk.Button(root, text="Select Input File", command=lambda:getFilepath(inputLabel))
-    inputButton.grid(row=2, column=2, padx=10, pady=30)
-
-    outputButton = tk.Button(root, text="Select Output Folder", command=lambda:getOutputFolder(outputLabel))
-    outputButton.grid(row=2, column=4, padx=10, pady=10)
-
-    inputLabel = tk.Label(root, wraplength = 250, text="The input file is: " + inputFilepath)
-    inputLabel.grid(row=3, column=2, columnspan =3)
-
-    outputLabel = tk.Label(root, wraplength = 250, text="The output location is: " + outputFilepath)
-    outputLabel.grid(row=4, column=2, columnspan =3)
-
-    submitButton = tk.Button(root, text="Find Specs", command=lambda:findSpecs(messageLabel))
-    submitButton.grid(row=5, column = 3, pady = 20)
 
 #Open the selection window
 selectionWindow()
