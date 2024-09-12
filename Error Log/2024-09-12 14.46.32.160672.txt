@@ -1,0 +1,46 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\utils\cell.py", line 130, in column_index_from_string
+    pos = __alpha_to_decimal[letter]
+          ~~~~~~~~~~~~~~~~~~^^^^^^^^
+KeyError: '3'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 494, in form
+    formatFile(voltList)
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 409, in formatFile
+    wbNew.save(newFile)
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\workbook\workbook.py", line 386, in save
+    save_workbook(self, filename)
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\writer\excel.py", line 294, in save_workbook
+    writer.save()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\writer\excel.py", line 275, in save
+    self.write_data()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\writer\excel.py", line 77, in write_data
+    self._write_worksheets()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\writer\excel.py", line 215, in _write_worksheets
+    self.write_worksheet(ws)
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\writer\excel.py", line 200, in write_worksheet
+    writer.write()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\_writer.py", line 358, in write
+    self.write_top()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\_writer.py", line 103, in write_top
+    self.write_cols()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\_writer.py", line 87, in write_cols
+    self.xf.send(cols.to_tree())
+                 ^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\dimensions.py", line 243, in to_tree
+    for col in sorted(self.values(), key=sorter):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\dimensions.py", line 237, in sorter
+    value.reindex()
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\dimensions.py", line 181, in reindex
+    self.min = self.max = column_index_from_string(self.index)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\utils\cell.py", line 132, in column_index_from_string
+    raise ValueError(error_msg)
+ValueError: '83' is not a valid column name. Column names are from A to ZZZ

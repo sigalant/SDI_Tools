@@ -111,6 +111,8 @@ def formatFile(voltList):
                 case str(x) if 'HEAT REJECTION' in x and 'HEAT REJECTION' not in indexDict:
                     indexDict['HEAT REJECTION'] = col
                     summingIndexes.append(col)
+                case str(x) if 'REMARKS' in x and 'REMARKS' not in indexDict:
+                    indexDict['REMARKS'] = col
                 case _:
                     pass
 
@@ -123,7 +125,7 @@ def formatFile(voltList):
                 if col in summingIndexes:
 
                     #try:
-                    if '(' in str(cellData) and col == indexDict['AMPS']:
+                    if '(' in str(cellData) and 'AMPS' in indexDict and col == indexDict['AMPS']:
                         cellData = (cellData.split("_x000D_"))
                         for i in range(len(cellData)):
                             if '(' in cellData[i]:
@@ -131,7 +133,7 @@ def formatFile(voltList):
                                 cellData[i] = fList[0]*fList[1]
                             else:
                                 cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
-                    elif col == indexDict['AMPS'] or col == indexDict['VOLTS'] or col == indexDict['PH']:
+                    elif ('AMPS' in indexDict and col == indexDict['AMPS']) or col == indexDict['VOLTS'] or col == indexDict['PH']:
                         cellData = ' '.join(cellData.split("_x000D_"))
                         cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
                     else:
@@ -143,7 +145,7 @@ def formatFile(voltList):
                     cellData = cellData.split("_x000D_")[0]
             try:
                 #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
-                if ')' in str(cellData) and col == indexDict['AMPS']:
+                if ')' in str(cellData) and (('AMPS' in indexDict and col == indexDict['AMPS']) or ('KW' in indexDict and col == indexDict['KW'])):
                     cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
                     mult= cellData[0]
                     cellData = cellData[0] * cellData[1]
@@ -199,7 +201,7 @@ def formatFile(voltList):
             rowData.append(cellData)
 
         #Make error message if an index is missing
-        indexes = ['AMPS','PH','VOLTS','KW','GPH','BTUS','EXH CFM','SUPPLY CFM', 'HEAT REJECTION']
+        indexes = ['PH','VOLTS','KW','GPH','BTUS','EXH CFM','SUPPLY CFM', 'HEAT REJECTION']
         missing = []
         for index in indexes:
             if index not in indexDict:
@@ -210,11 +212,17 @@ def formatFile(voltList):
             return
 
         #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
-        if type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or type(rowData[indexDict['AMPS']]) == list:
+        if type(rowData[indexDict['VOLTS']]) == list or type(rowData[indexDict['PH']]) == list or 'AMPS' in indexDict and type(rowData[indexDict['AMPS']]) == list:
             vs=rowData[indexDict['VOLTS']]
             ps=rowData[indexDict['PH']]
-            ams=rowData[indexDict['AMPS']]
-            
+            ams = []
+            if 'AMPS' in indexDict:
+                ams=rowData[indexDict['AMPS']]
+            elif 'KW' in indexDict:
+                ams=rowData[indexDict['KW']]
+            else:
+                print("WHERE ARE YOUR ELECTRICAL UNITS????!?!?!??!")
+
             for i in range(2):
                 newRow = rowData.copy()
                 try:
@@ -227,14 +235,26 @@ def formatFile(voltList):
                     newRow[indexDict['PH']] = ps[i]
                 except:
                     newRow[indexDict['PH']] = ps
-                try:
-                    assert type(ams) != str
-                    newRow[indexDict['AMPS']] = ams[i]
-                except:
-                    if type(ams) == str:
-                        newRow[indexDict['AMPS']] = ams
-                    else:
-                        newRow[indexDict['AMPS']] = ams/mult
+                
+                if 'AMPS' in indexDict:
+                    try:
+                        assert type(ams) != str
+                        newRow[indexDict['AMPS']] = ams[i]
+                    except:
+                        if type(ams) == str:
+                            newRow[indexDict['AMPS']] = ams
+                        else:
+                            newRow[indexDict['AMPS']] = ams/mult
+                elif 'KW' in indexDict:
+                    try:
+                        assert type(ams) != str
+                        newRow[indexDict['KW']] = ams
+                    except:
+                        if type(ams) == str:
+                            newRow[indexDict['KW']] = ams
+                        else:
+                            newRow[indexDict['KW']] = ams/mult
+
                 try:
                     if(i):
                         newRow[indexDict['BTUS']] = None
@@ -267,7 +287,8 @@ def formatFile(voltList):
     sheetNew.column_dimensions['F'].width = 10
     sheetNew.column_dimensions['G'].width = 10
     sheetNew.column_dimensions['H'].width = 10
-
+    if 'REMARKS' in indexDict:
+        sheetNew.column_dimensions[chr(65 + indexDict['REMARKS'])].width = 30
     
     img = opx.drawing.image.Image("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.PNG")
     img.height=40
@@ -294,7 +315,7 @@ def formatFile(voltList):
             continue
         
         #Add data
-        if type(sheetData[row][indexDict['AMPS']]) == str and sheetData[row][indexDict['AMPS']] != '':
+        if 'AMPS' in indexDict and type(sheetData[row][indexDict['AMPS']]) == str and sheetData[row][indexDict['AMPS']] != '':
             sheetData[row][indexDict['AMPS']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['AMPS']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
         if type(sheetData[row][indexDict['PH']]) == str and sheetData[row][indexDict['PH']] != '':
             sheetData[row][indexDict['PH']] = float(sheetData[row][indexDict['PH']].split('PH')[0])
@@ -303,12 +324,20 @@ def formatFile(voltList):
                 sheetData[row][indexDict['VOLTS']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
             v = float(str(sheetData[row][indexDict['VOLTS']]).split('V')[0])
             sheetData[row][indexDict['VOLTS']] = v
+            
             try:
-                sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"       
+                if 'AMPS' in indexDict:
+                    sheetData[row][indexDict['KW']] = "=IF("+chr((indexDict['KW']-2)+65)+str(row+7)+">1,(1.732*"+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000,("+chr((indexDict['KW']-3)+65)+str(row+7)+"*"+chr((indexDict['KW']-1)+65)+str(row+7)+")/1000)"
+                elif type(sheetData[row][indexDict['KW']]) == str:
+                    sheetData[row][indexDict['KW']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['KW']])][0]
+
             except Exception as e:
                 print(e)
         sheetNew.append(sheetData[row])
         
+        if 'REMARKS' in indexDict:
+            sheetNew[sheetNew.max_row][indexDict['REMARKS']].alignment = opx.styles.Alignment(wrap_text=True)
+
         #Alignments
         try:
             sheetNew[sheetNew.max_row][0].alignment = opx.styles.Alignment(horizontal='right')
