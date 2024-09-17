@@ -1,16 +1,17 @@
 #Imports
-import LogErrors
-import openpyxl as opx
+import os
 import tkinter as tk
+from tkinter import filedialog
 import re
 import sys
 import traceback
 from datetime import date
-from tkinter import filedialog
+
 from PIL import Image, ImageTk
-import os
+import openpyxl as opx
+
+import LogErrors
 import FindHeaders
-#sys.excepthook = LogErrors.handle_exception
 
 def resource_path(rel_path):
     try:
@@ -86,27 +87,32 @@ def formatFile(voltList):
     #AMPS, KW, GPH, BTUS, EXH CFM, SUPPLY CFM, VOLTS, PH, HEAT REJECTION 
 
     inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
-    metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
+    metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
     summingIndexes = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'heat rejection']
+
     missing = []
     for header in inList:
         if header not in hDict:
             missing.append(header)
+            
     metricMissing = []
     for header in metricInList:
         if header not in hDict:
             metricMissing.append(header)
+
     if missing:
         if metricMissing:
-            errorStr = "ERROR: The following header(s) was not found: "+ ', '.join(missing)
+            errorStr = ''
+            if len(metricMissing) < len(missing):
+                errorStr = "ERROR: The following header(s) was not found " + ', '.join(missing)
+            else:
+                errorStr = "ERROR: The following header(s) was not found " + ', '.join(metricMissing)
             errorMsg.config(text=errorStr)
             return
-        print("It's bloody metric innit bruv... chewsday")
         inList = metricInList
         summingIndexes = ['amps','lph','gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
-
-    sheetData = []#Holds all data from the sheet
-    #summingIndexes = []#Holds indexes of values that sum (probably not necessary)
+    
+    sheetData = []#Holds all data from input sheet
     
 
     #================= Copy all data to a 2D-List =========================================================================================================
@@ -121,6 +127,15 @@ def formatFile(voltList):
             #Remove commas for better number processing
             if type(cellData) == str:
                 cellData = cellData.replace(',','')
+
+        #TODO: Make the following three chunks more legible/condensed/linear
+            if "_x000D_" in str(cellData):
+                #Option 1: Takes the first value (not ideal)
+                        
+                #Option 2: Adds the values together (only good for indexes which sum)
+
+                #Option 3: Gives each value its own row (only necessary for electrical values)
+                
                 
             # Adjust for 'newlines' in cell
             if "_x000D_" in str(cellData):
@@ -131,6 +146,7 @@ def formatFile(voltList):
                             if '(' in cellData[i]:
                                 fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
                                 cellData[i] = fList[0]*fList[1]
+                                #no mult?
                             else:
                                 cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
                     elif head in ['amps','volts','ph']:
@@ -324,7 +340,7 @@ voltLabel = tk.Label(voltFrame, text="Enter acceptable voltages:")
 voltLabel.pack(side=tk.TOP)
 voltEntries = []
 
-#Switch to next text box wher 'TAB' or 'RETURN' key pressed
+#Switch to next text box when 'TAB' or 'RETURN' key pressed
 def tab_pressed(event):
     if voltEntries.index(event.widget)+1<len(voltEntries):
         voltEntries[voltEntries.index(event.widget)+1].focus_set()
@@ -350,6 +366,7 @@ def removeVolt(butts):
     if(len(voltEntries) <= 1):
         butts[1].pack_forget()
     butts[0].pack(side=tk.RIGHT)
+
 voltButtons=[None,None]
 addVoltButton = tk.Button(voltFrame, text = "+", command=lambda:addVolt(voltButtons))
 removeVoltButton = tk.Button(voltFrame, text = "-", command=lambda:removeVolt(voltButtons))
