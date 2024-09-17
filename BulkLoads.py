@@ -290,6 +290,11 @@ def formatFile(voltList):
     if 'REMARKS' in indexDict:
         sheetNew.column_dimensions[chr(65 + indexDict['REMARKS'])].width = 30
     
+    sheetNew.page_setup.paperSize = sheetNew.PAPERSIZE_TABLOID
+    sheetNew.sheet_properties.pageSetUpPr.fitToPage = True
+    sheetNew.page_setup.fitToHeight = False
+    sheetNew.page_setup.orientation = sheetNew.ORIENTATION_LANDSCAPE
+    
     img = opx.drawing.image.Image("V:\\Software\\Utilities Formatting Tool\\data\\SDI_Logo.PNG")
     img.height=40
     img.width=65
