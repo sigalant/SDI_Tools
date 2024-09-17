@@ -4,8 +4,8 @@
 a = Analysis(
     ['BulkLoads.py'],
     pathex=[],
-    binaries=[('LogErrors.py', '.')],
-    datas=[],
+    binaries=[],
+    datas=[('./data/shared/', '.'), ('./data/UtilityTool', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['data\\SDI_Logo.ico'],
+    icon=['data\\shared\\SDI_Logo.ico'],
 )
 coll = COLLECT(
     exe,

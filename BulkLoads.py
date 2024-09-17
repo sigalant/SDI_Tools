@@ -11,6 +11,16 @@ from PIL import Image, ImageTk
 import os
 #sys.excepthook = LogErrors.handle_exception
 
+def resource_path(rel_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abs("./_internal")
+    return os.path.join(base_path,rel_path)
+
+
+
+
 #Holds I/O filepaths
 inputFilepath = ""
 outputFilepath = ""
@@ -23,7 +33,7 @@ root.title("SDI Bulk Loads Formatting Tool")
 root.geometry("800x450")
 
 menubar = tk.Menu()
-menubar.add_command(label="Help", command= lambda:os.startfile('Help.html'))
+menubar.add_command(label="Help", command= lambda:os.startfile(resource_path('Help.html')))
 root.config(menu=menubar)
 
 #Opens popup window with traceback if unhandled exception
