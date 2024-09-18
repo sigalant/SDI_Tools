@@ -17,7 +17,7 @@ def resource_path(rel_path):
     try:
         base_path = sys.MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")#/_internal")
+        base_path = os.path.abspath("./_internal")
     return os.path.join(base_path, rel_path)
 
 #Holds I/O filepaths
