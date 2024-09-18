@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 349, in form
+    formatFile(voltList)
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 210, in formatFile
+    img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\drawing\image.py", line 32, in __init__
+    image = _import_image(img)
+            ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\drawing\image.py", line 16, in _import_image
+    img = PILImage.open(img)
+          ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\PIL\Image.py", line 3277, in open
+    fp = builtins.open(filename, "rb")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\Antonio\\Documents\\GitHub\\SDI_Tools\\SDI_Logo.PNG'

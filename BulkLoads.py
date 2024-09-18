@@ -17,7 +17,7 @@ def resource_path(rel_path):
     try:
         base_path = sys.MEIPASS
     except Exception:
-        base_path = os.path.abspath("./_internal")
+        base_path = os.path.abspath(".")#/_internal")
     return os.path.join(base_path, rel_path)
 
 #Holds I/O filepaths
@@ -83,8 +83,7 @@ def formatFile(voltList):
     wbNew=opx.Workbook()
     sheetNew=wbNew.active
 
-    hDict = FindHeaders.FindHeaders(inputFilepath)#{}#Holds index of important values
-    #AMPS, KW, GPH, BTUS, EXH CFM, SUPPLY CFM, VOLTS, PH, HEAT REJECTION 
+    hDict = FindHeaders.FindHeaders(inputFilepath)#Holds index of important values
 
     inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
     metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
@@ -128,97 +127,67 @@ def formatFile(voltList):
             if type(cellData) == str:
                 cellData = cellData.replace(',','')
 
-        #TODO: Make the following three chunks more legible/condensed/linear
-            if "_x000D_" in str(cellData):
-                #Option 1: Takes the first value (not ideal)
-                        
-                #Option 2: Adds the values together (only good for indexes which sum)
-
-                #Option 3: Gives each value its own row (only necessary for electrical values)
-                
-                
             # Adjust for 'newlines' in cell
-            if "_x000D_" in str(cellData):
-                if head in summingIndexes or head in ['volts', 'ph', 'amps']:
-                    if '(' in str(cellData) and head == 'amps':
-                        cellData = (cellData.split("_x000D_"))
-                        for i in range(len(cellData)):
-                            if '(' in cellData[i]:
-                                fList = [float(t) for t in re.findall(r'\d+\.?\d*',cellData[i])]
-                                cellData[i] = fList[0]*fList[1]
-                                #no mult?
-                            else:
-                                cellData[i] = [float(s) for s in re.findall(r'\d+\.?\d*',cellData[i])][0]
-                    elif head in ['amps','volts','ph']:
-                        cellData = ' '.join(cellData.split("_x000D_"))
-                        cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
+            if "_x000D_" in str(cellData) and (head in ['volts', 'ph', 'amps'] or head in summingIndexes):
+                cellData = cellData.split("_x000D_")
+                for i in range(len(cellData)):
+                    if '(' in cellData[i] and head not in ['volts','ph']:
+                        fList = [float(t) for t in re.findall(r'\d+\.?\d*', cellData[i])]
+                        cellData[i] = fList[0]*fList[1]
                     else:
-                        cellData = ' '.join(cellData.split("_x000D_"))
-                        cellData = sum([float(s) for s in re.findall(r'\d+\.?\d*',cellData)])
-                else:
-                    cellData = cellData.split("_x000D_")[0]
+                        cellData[i] = [float(t) for t in re.findall(r'\d+\.?\d*', cellData[i])][0]
+                if head not in ['volts', 'ph', 'amps']: # maybe also kw?
+                    cellData = sum(cellData)
             
-            #Adjust for utility quantity x: (x)...A   (Should this work for other fields?)
-            if ')' in str(cellData) and head == 'amps':
+            #Adjust for quantity x: (x)...A
+            elif ')' in str(cellData) and (head in summingIndexes or head == 'amps') and row[hDict[head]].row>1:#head == 'amps':
                 cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
-                mult= cellData[0]
+                if head == 'amps': mult= cellData[0]
                 cellData = cellData[0] * cellData[1]
 
             #Strip summing fields of everything except a number
-            if type(cellData) == str and row[hDict[head]].row>1 and head in summingIndexes:
-                if head in ('btus','gas kw'):
-                    cellData = re.findall(r'\d+',cellData)
-                    if len(cellData) > 1:
-                        cellData = int(cellData[0])*int(cellData[1])
-                    else:
-                        try:
-                            cellData = int(cellData[0])
-                        except:
-                            print("This file if f****'d")
-                elif head != 'amps':
-                    try:
-                        cellData = float(re.findall(r'\d+',cellData)[0])
-                    except:
-                        print("This file is no flippin good bro")
+            if type(cellData) == str and (head in summingIndexes or head in ['volts','ph','amps']) and row[hDict[head]].row>1:
+                if head == 'volts' and '/' in cellData:
+                    cellData = '208'
+                cellData = [float(t) for t in re.findall(r'\d+\.?\d*',cellData)]
+                if len(cellData) > 1:
+                    print(str(cellData) + ":" + str(head) + ":" + str(row[hDict[head]].row))
+                else:
+                    cellData = float(cellData[0])
+                        
             rowData[hDict[head]] = cellData
-
         
         #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
         if type(rowData[hDict['volts']]) == list or type(rowData[hDict['ph']]) == list or type(rowData[hDict['amps']]) == list:
-            vs=rowData[hDict['volts']]
-            ps=rowData[hDict['ph']]
-            ams=rowData[hDict['amps']]
+            vs= rowData[hDict['volts']] if isinstance(rowData[hDict['volts']],list) else [rowData[hDict['volts']]]
+            ps= rowData[hDict['ph']] if isinstance(rowData[hDict['ph']],list) else [rowData[hDict['ph']]]
+            ams= rowData[hDict['amps']] if isinstance(rowData[hDict['amps']],list) else [rowData[hDict['amps']]]
             
-            for i in range(2):
+            for i in range(len(max([vs,ps,ams], default=(), key=len))):
                 newRow = rowData.copy()
-                if type(vs) == list:
+                if i<len(vs):
                     newRow[hDict['volts']] = vs[i]
                 else:
-                    newRow[hDict['volts']] = vs
-                if type(ps) == list:
+                    newRow[hDict['volts']] = vs[0]
+                if i<len(ps):
                     newRow[hDict['ph']] = ps[i]
                 else:
-                    newRow[hDict['ph']] = ps
-                if type(ams) == list:
-                    newRow[hDict['amps']] = ams[i]
+                    newRow[hDict['ph']] = ps[0]
+                if i<len(ams):
+                    newRow[hDict['amps']] = ams[i]/mult
                 else:
-                    if type(ams) == str:
-                        newRow[hDict['amps']] = ams
-                    else:
-                        newRow[hDict['amps']] = ams/mult
+                    newRow[hDict['amps']] = ams[0]/mult
                 if(i):
                     for entry in summingIndexes:
-                        if entry in ('amps','kw'):
-                            continue
-                        newRow[hDict[entry]] = None
-                
+                        if entry not in ('amps','kw'):
+                            newRow[hDict[entry]] = None
                 sheetData.append(newRow)
         else:
             sheetData.append(rowData)
             
     
 
-#============ Paste data ================================================================================================================================    
+#============ Paste data to new sheet ================================================================================================================================    
     #Excel File Heading
     sheetNew.row_dimensions[1].height=30
     sheetNew.row_dimensions[2].height=30.75
@@ -236,7 +205,13 @@ def formatFile(voltList):
     sheetNew.column_dimensions['F'].width = 10
     sheetNew.column_dimensions['G'].width = 10
     sheetNew.column_dimensions['H'].width = 10
+    if 'remarks' in hDict:
+        sheetNew.column_dimensions[chr(65 + hDict['remarks'])].width = 30
 
+    sheetNew.page_setup.paperSize = sheetNew.PAPERSIZE_TABLOID
+    sheetNew.sheet_properties.pageSetUpPr.fitToPage = True
+    sheetNew.page_setup.fitToHeight = False
+    sheetNew.page_setup.orientation = sheetNew.ORIENTATION_LANDSCAPE
     
     img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
     img.height=40
@@ -247,12 +222,12 @@ def formatFile(voltList):
     sheetNew['A3'].font = opx.styles.Font(size=24, bold=True)
     sheetNew['A4'] = str(date.today().strftime("%B %d, %Y"))
     sheetNew['A4'].font = opx.styles.Font(size=18, bold=True)
-    sheetNew.append([''])
+    sheetNew.append([''])        
 
-    #Add data to sheet        
     sheetNew.append(sheetData[0])
     sheetNew.freeze_panes = sheetNew['C7']
-    
+
+    #Add data to sheet
     for row in range(1,len(sheetData)):
 
         #Check if area header
@@ -263,43 +238,29 @@ def formatFile(voltList):
                 sheetNew[sheetNew.max_row][i].fill = opx.styles.PatternFill(fgColor="002060", fill_type="solid")
             continue
         
+        
         #Add data
-        if type(sheetData[row][hDict['amps']]) == str and sheetData[row][hDict['amps']] != '':
-            sheetData[row][hDict['amps']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][hDict['amps']])][0]#float(str(sheetData[row][indexDict['AMPS']]).split('A')[0])
-        
-        if type(sheetData[row][hDict['ph']]) == str and sheetData[row][hDict['ph']] != '':
-            sheetData[row][hDict['ph']] = float(sheetData[row][hDict['ph']].split('PH')[0])
-        
-        if sheetData[row][hDict['volts']] != None and sheetData[row][hDict['volts']] != '':
-            if '/' in str(sheetData[row][hDict['volts']]):
-                sheetData[row][hDict['volts']] = '208V'#sheetData[row][indexDict['VOLTS']].split('/')[0]
-            v = float(str(sheetData[row][hDict['volts']]).split('V')[0])
-            sheetData[row][hDict['volts']] = v
-            if 'kw' in hDict:
-                sheetData[row][hDict['kw']] = "=IF("+chr((hDict['kw']-2)+65)+str(row+7)+">1,(1.732*"+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000,("+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000)"       
-        #print(sheetData[row])
+        if sheetData[row][hDict['volts']] != None and 'kw' in hDict:
+            if 'amps' in hDict:
+                sheetData[row][hDict['kw']] = "=IF("+chr((hDict['kw']-2)+65)+str(row+7)+">1,(1.732*"+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000,("+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000)"
+            else:
+                sheetData[row][hDict['kw']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['kw']])][0]
+                
         sheetNew.append(sheetData[row])
         
-        #Alignments
-        try:
-            sheetNew[sheetNew.max_row][0].alignment = opx.styles.Alignment(horizontal='right')
-            sheetNew[sheetNew.max_row][1].alignment = opx.styles.Alignment(horizontal='center')
-        except Exception as e:
-            print(str(e))
+        #Alignments/Formatting
+        sheetNew[sheetNew.max_row][hDict['remarks']].alignment = opx.styles.Alignment(wrap_text=True)
+        
+        sheetNew[sheetNew.max_row][0].alignment = opx.styles.Alignment(horizontal='right')
+        sheetNew[sheetNew.max_row][1].alignment = opx.styles.Alignment(horizontal='center')
+        
+        if sheetData[row][hDict['volts']] != None and float(sheetData[row][hDict['volts']]) not in voltList:
+            sheetNew[row+7][hDict['volts']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
 
-        try:
-            if float(sheetData[row][hDict['volts']]) not in voltList:
-                sheetNew[row+7][hDict['volts']].fill = opx.styles.PatternFill(start_color='00FFFF00', end_color='00FFFF00', fill_type='solid')
-        except:
-            pass
-        try:
+        if 'amps' in hDict:
             sheetNew[sheetNew.max_row][hDict['amps']].number_format="0.0"
-        except:
-            pass
-        try:
+        if 'kw' in hDict:
             sheetNew[sheetNew.max_row][hDict['kw']].number_format="0.00"
-        except:
-            pass
 
     #Sums
     sheetNew.append([""])
@@ -307,13 +268,10 @@ def formatFile(voltList):
     sheetNew[sheetNew.max_row][0].font = opx.styles.Font(bold=True)
     
     for header in summingIndexes:
-        try:
-            sheetNew[sheetNew.max_row][hDict[header]].value = "=SUM("+chr(hDict[header]+65)+str(7)+":"+chr(hDict[header]+65)+str(sheetNew.max_row-1)+")"
-            sheetNew[sheetNew.max_row][hDict[header]].number_format="#,##0"
-            sheetNew[sheetNew.max_row][hDict[header]].font = opx.styles.Font(bold=True)
-        except Exception as e:
-            print("Error with header: " + str(e))
-    
+        sheetNew[sheetNew.max_row][hDict[header]].value = "=SUM("+chr(hDict[header]+65)+str(7)+":"+chr(hDict[header]+65)+str(sheetNew.max_row-1)+")"
+        sheetNew[sheetNew.max_row][hDict[header]].number_format="#,##0"
+        sheetNew[sheetNew.max_row][hDict[header]].font = opx.styles.Font(bold=True)
+        
     wbNew.save(newFile)
 
 
@@ -325,7 +283,6 @@ voltFrame.pack(pady=20)
 
 fileFrame = tk.Frame(root)
 fileFrame.pack()
-
 
 bottomFrame = tk.Frame(root)
 bottomFrame.pack()
