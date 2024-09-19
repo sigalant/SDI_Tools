@@ -154,7 +154,7 @@ def findSpecs(msgLabel):
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
     noFill = opx.styles.PatternFill(start_color = 'FFFFFF', end_color = 'FFFFFF', fill_type = 'solid')
 
-    hDict = FindHeaders.FindHeaders(inputFilepath)
+    hDict = FindHeaders.FindHeaders(sheet)
     headers = ['qty','description','remarks','manuf.','model']
 
     missing = []

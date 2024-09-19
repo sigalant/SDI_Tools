@@ -83,7 +83,7 @@ def formatFile(voltList):
     wbNew=opx.Workbook()
     sheetNew=wbNew.active
 
-    hDict = FindHeaders.FindHeaders(inputFilepath)#Holds index of important values
+    hDict = FindHeaders.FindHeaders(sheet)#Holds index of important values
 
     inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
     metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
