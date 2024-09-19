@@ -103,6 +103,7 @@ def copySpecs(tempDocPath, p, highlight, cur):
                 j = j+1
             except Exception:
                 pass
+            
             if highlight:
                 colorRun.font.highlight_color = d.enum.text.WD_COLOR_INDEX.YELLOW
         j=j+1
@@ -113,7 +114,6 @@ def ChooseSpec(chosenSpec, popup, tv):
     item = tv.item(tv.focus())
     if len(item['values']) < 2:
         print("Make a Selection")
-        return
     else:
         chosenSpec.set(item['values'][3])
         popup.destroy()
@@ -131,8 +131,6 @@ def findSpecs(msgLabel):
         cur.execute("CREATE TABLE IF NOT EXISTS item (desc, manu, model, doc)")
         cur.execute("CREATE TABLE IF NOT EXISTS spec (doc, text, modTime)")
         con.commit()
-
-         
     cur = con.cursor()
 
     #Make sure input/output paths exist
@@ -145,10 +143,10 @@ def findSpecs(msgLabel):
     if outputFilepath == "":
         msgLabel.config(text="Error: Select Output Location")
         return
+
     wbNew = opx.Workbook()
     newSheet = wbNew.active
     sheet = wb.active
-    
     
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     redFill = opx.styles.PatternFill(start_color = 'FF0000', end_color = 'FF0000', fill_type = 'solid')
@@ -239,7 +237,7 @@ def findSpecs(msgLabel):
         wbNew.save(outputFilepath+"\\SpecRefSheet.xlsx")
         global excelFilepath
         excelFilepath = outputFilepath+"/SpecRefSheet.xlsx"
-    except Exception as e:
+    except PermissionError as e:
         print(e)
         msgLabel.config(text="Error: Cannot Save SpecRefSheet.xlsx while file is open")
         return
@@ -249,6 +247,7 @@ def writeSpecs(msgLabel, units):
     start_time = time.time()
     
     global excelFilepath
+    
     metric = False
     if units == "Metric":
         metric = True
@@ -287,8 +286,6 @@ def writeSpecs(msgLabel, units):
     yellowFill = opx.styles.PatternFill(start_color = 'FFFF00', end_color = 'FFFF00', fill_type = 'solid')
     specRefs = [[],[],[],[],[]]  #Holds [Desc.[], Manufacturer[], Model#[], refFile[], exactMatch?[]] from xl spec ref file
 
-    
-
     #If there's a ref sheet, copy item information for later searching
     if excelFilepath:
         refSheet = wbr.active
@@ -311,16 +308,15 @@ def writeSpecs(msgLabel, units):
                 except:
                     specRefs[3].append("Broken Path :(")
                 if row[0].fill == yellowFill:
-                    #print("False")
                     specRefs[4].append(False)
                 else:
-                    #print("True")
                     specRefs[4].append(True)
 
-    hDict = FindHeaders.FindHeaders(inputFilepath)
+    hDict = FindHeaders.FindHeaders(sheet)
     missing = [] #Holds all headers which were not found
     
     #Headers that get used for making specs/spec headers for imperial and metric units respectively
+
     #TODO: remove non-consequential headers from lists, and instead check for existence just before use (not every header MUST always be present)
     #TODO: Decide for yourself if metric or imperial. Don't give the user so much power(responsibility)
     headers = ['description','qty','manuf.','equipment', 'remarks', 'model', 'hgt._','cw', 'd.w.', 'connection load','voltage', 'phase', 'comments__', 'cfm', 'cfm_', 'hw', 'waste', 'size_', 'in size', 'out size', 'btu\'s','w.c.']
@@ -978,15 +974,12 @@ def ModifyEntry(con, tv, root, msg):
     docButton.grid(row=5,column=3)
     ch = tk.StringVar(root, "")
     res=tk.StringVar(root, "0")
+
     def submit():
         changes = [descText.get('1.0', 'end-1c'), manuText.get('1.0', 'end-1c'), modelText.get('1.0', 'end-1c'), docPath.get()]
         badChars = ['\\','/','|','?',':','*','<','>','"',"'",',']
         ch.set(",".join(changes))
-        '''
-        if changes[3] != '' and 'V:/Specs/Specs Script/Template Specs_Word Files' not in changes[3]:
-            msgLabel.config(text="Please use a file in the location: V:/Specs/Specs Script/Template Specs_Word Files")
-            return
-        '''
+        
         if any(char in ' '.join(changes[:3]) for char in badChars):
             msgLabel.config(text="Warning: Cannot use the following characters: " + ','.join(badChars))
             return
