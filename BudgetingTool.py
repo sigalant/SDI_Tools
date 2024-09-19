@@ -1,21 +1,19 @@
 #Imports
 
 import tkinter as tk
-import openpyxl as opx
 import tkinter.ttk as ttk
 from datetime import date
 from tkinter import filedialog
-from PIL import Image, ImageTk
 import sys
 import traceback
-import LogErrors
 import os
+
+from PIL import Image, ImageTk
+import openpyxl as opx
+
+import LogErrors
 import FindHeaders
 
-try:
-    import pyi_splash
-except:
-    print("Not built with PyInstaller")
 
 
 def resource_path(rel_path):
@@ -111,13 +109,17 @@ def formatFile():
     errorMsg.config(text="Spreadsheet Successfully Formatted")
 
     #Open Excel File 
-    wb = opx.load_workbook(inputFilepath)
+    wb = opx.load_workbook(inputFilepath, read_only=True)
     sheet = wb.active
     
     #Get all headers
-    hDict = FindHeaders.FindHeaders(inputFilepath)
+    hDict = FindHeaders.FindHeaders(sheet)
     headers = ['itemno','qty','category','sell','remarks','spec','model','unit','selltotal'] #Headers used in this function
     missing = [] #Holds missing headers
+
+    if len(hDict) < 2 or sheet.max_column < 2:
+        errorMsg.config(text="Error: only " + str(len(hDict)) + " columns were found. Please re-save the Excel file and try again.")
+        return
     #Check for missing headers
     for head in headers:
         if head not in hDict:
@@ -133,7 +135,6 @@ def formatFile():
     data = [] #To hold all project data for each item
 
     for row in sheet.rows:
-        #Collect data from each row (Skipping empty cells)
 
         rowData = ["" for i in range(len(hDict))] #To hold data for a single item
         
@@ -143,19 +144,15 @@ def formatFile():
         b = int(row[0].fill.start_color.index[6:8], 16)  # Blue
         
 
-        #Skip first row and non-white rows
-        if (('itemno' in hDict and str(row[hDict['itemno']].value).lower() == "ItemNo".lower()) 
+        #Skip first row and highlighted rows
+        if (('itemno' in hDict and str(row[hDict['itemno']].value).lower() == "itemno") 
             or (r < int('ef',16) or g < int('ef', 16) or b < int('ef', 16))):
             continue
-        
-        for header in hDict:
-            #Add each header value for each item. If header not found, add empty value
-            try:
-                assert (hDict[header] != -1)
-                rowData[hDict[header]] = row[hDict[header]].value
-            except Exception:
-                rowData[hDict[header]] = ''
 
+        #Add each header value for each item.
+        for header in hDict: 
+            rowData[hDict[header]] = row[hDict[header]].value
+            
         #Remove Cost and Qty of SpareNo items
         if 'category' in hDict and rowData[hDict['category']] != None: 
             rowData[hDict['category']] = str(rowData[hDict['category']]).upper()
@@ -212,7 +209,7 @@ def formatFile():
 
     headerBorder = opx.styles.borders.Border(top=opx.styles.borders.Side(style='thick', color='80002060'), bottom=opx.styles.borders.Side(style='thick'))
     
-    img = opx.drawing.image.Image("V:\\Budget\\AutoQuotes Budget Script\\SDI Logo.jpg")
+    img = opx.drawing.image.Image(resource_path("SDI Logo.jpg"))
     img.height = 40
     img.width = 65
     sheetNew.add_image(img, 'A1')
@@ -260,13 +257,15 @@ def formatFile():
 
     #Copy previously collected data to a new XL sheet
     for i in range(len(data)):
-        
+
+        #Check for Location Header
         if 'spec' in hDict and 'itemno' in hDict and data[i][hDict['spec']] != None and data[i][hDict['spec']] == str(data[i][hDict['spec']]).upper() and data[i][hDict['itemno']] == None:
             
             #If there isn't title, use the first location header as a title
             if sheetNew['A2'].value == "":
                 sheetNew['A2'] = data[i][hDict['spec']]
                 continue
+            
             rowNum = rowNum+1
             c = "A"+str(rowNum)
             sheetNew[c] = data[i][hDict['spec']]
@@ -284,6 +283,7 @@ def formatFile():
 
             
             rowNum = rowNum+1
+        #Paste copied data
         else:
             if 'itemno' in hDict and data[i][hDict['itemno']] == None and not errorShown:
                 tk.messagebox.showerror('Formatting Error', "Error: Please collapse all items in autocad before export")
@@ -359,8 +359,10 @@ def formatFile():
         sheetNew['A'+str(rowNum+9)] = "3. Price is good through _____________"
     sheetNew['A'+str(rowNum+9)].font = opx.styles.Font(color ='595959')
 #=======================================================================================================================================================================================================================================================================================================
-    wbNew.save(newFile)
-
+    try:
+        wbNew.save(newFile)
+    except PermissionError:
+        errorMsg.config(text="Error: Cannot Save Excel File While Open")
 
 
 
@@ -402,5 +404,4 @@ in_file.pack(padx=10, pady=15, side=tk.LEFT)
 out_folder = tk.Button(frame, text="select output folder", command=getOutputFolder)
 out_folder.pack(padx=10, pady=15, side=tk.LEFT)
 
-pyi_splash.close()
 root.mainloop()

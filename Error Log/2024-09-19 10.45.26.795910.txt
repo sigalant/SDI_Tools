@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BudgetingTool.py", line 116, in formatFile
+    hDict = FindHeaders.FindHeaders(inputFilepath)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\FindHeaders.py", line 8, in FindHeaders
+    if sheet.max_columns < 2:
+       ^^^^^^^^^^^^^^^^^
+AttributeError: 'ReadOnlyWorksheet' object has no attribute 'max_columns'. Did you mean: 'max_column'?
