@@ -20,6 +20,9 @@ def resource_path(rel_path):
         base_path = os.path.abspath("./_internal")
     return os.path.join(base_path, rel_path)
 
+
+
+
 #Holds I/O filepaths
 inputFilepath = ""
 outputFilepath = ""
@@ -51,9 +54,9 @@ def handle_exception(exc,val,tb):
 
 root.report_callback_exception = handle_exception
 
-ico= Image.open(resource_path("SDI_Logo.ico"))
-photo = ImageTk.PhotoImage(ico)
-root.wm_iconphoto(False, photo)
+#ico= Image.open(resource_path("SDI_Logo.ico"))
+#photo = ImageTk.PhotoImage(ico)
+#root.wm_iconphoto(False, photo)
 
 #For displaying errors to user
 errorFrame = tk.Frame(root)
@@ -85,7 +88,7 @@ def formatFile(voltList):
 
     hDict = FindHeaders.FindHeaders(sheet)#Holds index of important values
 
-    inList = ['amps', 'kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
+    inList = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
     metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
     summingIndexes = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'heat rejection']
 
@@ -102,7 +105,7 @@ def formatFile(voltList):
     if missing:
         if metricMissing:
             errorStr = ''
-            if len(metricMissing) < len(missing):
+            if len(metricMissing) > len(missing):
                 errorStr = "ERROR: The following header(s) was not found " + ', '.join(missing)
             else:
                 errorStr = "ERROR: The following header(s) was not found " + ', '.join(metricMissing)
@@ -140,7 +143,7 @@ def formatFile(voltList):
                     cellData = sum(cellData)
             
             #Adjust for quantity x: (x)...A
-            elif ')' in str(cellData) and (head in summingIndexes or head == 'amps') and row[hDict[head]].row>1:#head == 'amps':
+            elif ')' in str(cellData) and (head in summingIndexes or head in ['amps','kw']) and row[hDict[head]].row>1:
                 cellData = [float(s) for s in re.findall(r'\d+\.?\d*',cellData)]
                 if head == 'amps': mult= cellData[0]
                 cellData = cellData[0] * cellData[1]
@@ -157,12 +160,17 @@ def formatFile(voltList):
                         
             rowData[hDict[head]] = cellData
         
-        #If an electrical column had a 'newline'(_x000D_), then give each value its own row (only works for 2 values)
-        if type(rowData[hDict['volts']]) == list or type(rowData[hDict['ph']]) == list or type(rowData[hDict['amps']]) == list:
+        #If an electrical column had a 'newline'(_x000D_), then give each value its own row 
+        if type(rowData[hDict['volts']]) == list or type(rowData[hDict['ph']]) == list or ('amps' in hDict and type(rowData[hDict['amps']]) == list) or ('kw' in hDict and type(rowData[hDict['kw']]) == list):
             vs= rowData[hDict['volts']] if isinstance(rowData[hDict['volts']],list) else [rowData[hDict['volts']]]
             ps= rowData[hDict['ph']] if isinstance(rowData[hDict['ph']],list) else [rowData[hDict['ph']]]
-            ams= rowData[hDict['amps']] if isinstance(rowData[hDict['amps']],list) else [rowData[hDict['amps']]]
-            
+            ams= []
+            if 'amps' in hDict:
+                ams = rowData[hDict['amps']] if isinstance(rowData[hDict['amps']],list) else [rowData[hDict['amps']]]
+            elif 'kw' in hDict:
+                ams = rowData[hDict['kw']] if isinstance(rowData[hDict['kw']],list) else [rowData[hDict['kw']]]
+            else:
+                print("What happened to the electrical units???")
             for i in range(len(max([vs,ps,ams], default=(), key=len))):
                 newRow = rowData.copy()
                 if i<len(vs):
@@ -173,10 +181,11 @@ def formatFile(voltList):
                     newRow[hDict['ph']] = ps[i]
                 else:
                     newRow[hDict['ph']] = ps[0]
+                header = 'amps' if 'amps' in hDict else 'kw'
                 if i<len(ams):
-                    newRow[hDict['amps']] = ams[i]/mult
+                    newRow[hDict[header]] = ams[i]/mult
                 else:
-                    newRow[hDict['amps']] = ams[0]/mult
+                    newRow[hDict[header]] = ams[0]/mult
                 if(i):
                     for entry in summingIndexes:
                         if entry not in ('amps','kw'):
@@ -205,6 +214,7 @@ def formatFile(voltList):
     sheetNew.column_dimensions['F'].width = 10
     sheetNew.column_dimensions['G'].width = 10
     sheetNew.column_dimensions['H'].width = 10
+    
     if 'remarks' in hDict:
         sheetNew.column_dimensions[chr(65 + hDict['remarks'])].width = 30
 
@@ -213,10 +223,10 @@ def formatFile(voltList):
     sheetNew.page_setup.fitToHeight = False
     sheetNew.page_setup.orientation = sheetNew.ORIENTATION_LANDSCAPE
     
-    img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
-    img.height=40
-    img.width=65
-    sheetNew.add_image(img, "A1")
+    #img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
+    #img.height=40
+    #img.width=65
+    #sheetNew.add_image(img, "A1")
 
     sheetNew['A3'] = "________ Preliminary Utility Schedule"
     sheetNew['A3'].font = opx.styles.Font(size=24, bold=True)
@@ -244,12 +254,13 @@ def formatFile(voltList):
             if 'amps' in hDict:
                 sheetData[row][hDict['kw']] = "=IF("+chr((hDict['kw']-2)+65)+str(row+7)+">1,(1.732*"+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000,("+chr((hDict['kw']-3)+65)+str(row+7)+"*"+chr((hDict['kw']-1)+65)+str(row+7)+")/1000)"
             else:
-                sheetData[row][hDict['kw']] = [float(s) for s in re.findall(r'\d+\.?\d*',sheetData[row][indexDict['kw']])][0]
+                sheetData[row][hDict['kw']] = sheetData[row][hDict['kw']]
                 
         sheetNew.append(sheetData[row])
         
         #Alignments/Formatting
-        sheetNew[sheetNew.max_row][hDict['remarks']].alignment = opx.styles.Alignment(wrap_text=True)
+        if 'remarks' in hDict:
+            sheetNew[sheetNew.max_row][hDict['remarks']].alignment = opx.styles.Alignment(wrap_text=True)
         
         sheetNew[sheetNew.max_row][0].alignment = opx.styles.Alignment(horizontal='right')
         sheetNew[sheetNew.max_row][1].alignment = opx.styles.Alignment(horizontal='center')
