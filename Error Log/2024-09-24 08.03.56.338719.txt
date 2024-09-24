@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\SpecTool.py", line 62, in <module>
+    ico = Image.open(resource_path("SDI Logo.jpg"))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\PIL\Image.py", line 3277, in open
+    fp = builtins.open(filename, "rb")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\Antonio\\Documents\\GitHub\\SDI_Tools\\_internal\\SDI Logo.jpg'
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\Antonio\\Documents\\GitHub\\SDI_Tools\\_internal\\SDI Logo.jpg'

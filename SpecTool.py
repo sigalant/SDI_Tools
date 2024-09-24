@@ -58,10 +58,10 @@ def handle_exception(exc,val,tb):
     LogErrors.handle_exception(exc,val,tb)
 root.report_callback_exception = handle_exception
 
-
-ico = Image.open(resource_path("SDI Logo.jpg"))
-photo = ImageTk.PhotoImage(ico)
-root.wm_iconphoto(False, photo)
+#REMOVE COMMENTS AFTER COMPLETING CHANGES
+#ico = Image.open(resource_path("SDI Logo.jpg"))
+#photo = ImageTk.PhotoImage(ico)
+#root.wm_iconphoto(False, photo)
 
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
@@ -243,16 +243,12 @@ def findSpecs(msgLabel):
         return
     msgLabel.config(text="Successfully Created Spec Ref Sheet")
         
-def writeSpecs(msgLabel, units):
+def writeSpecs(msgLabel):
     start_time = time.time()
     
     global excelFilepath
     
     metric = False
-    if units == "Metric":
-        metric = True
-    else:
-        metric = False
     
     specDict = {}
 
@@ -314,28 +310,33 @@ def writeSpecs(msgLabel, units):
 
     hDict = FindHeaders.FindHeaders(sheet)
     missing = [] #Holds all headers which were not found
-    
-    #Headers that get used for making specs/spec headers for imperial and metric units respectively
 
-    #TODO: remove non-consequential headers from lists, and instead check for existence just before use (not every header MUST always be present)
-    #TODO: Decide for yourself if metric or imperial. Don't give the user so much power(responsibility)
-    headers = ['description','qty','manuf.','equipment', 'remarks', 'model', 'hgt._','cw', 'd.w.', 'connection load','voltage', 'phase', 'comments__', 'cfm', 'cfm_', 'hw', 'waste', 'size_', 'in size', 'out size', 'btu\'s','w.c.']
-    metricHeaders = ['description', 'qty', 'manuf.', 'equipment','remarks', 'model', 'hgt. (mm)_', 'cw (mm)','d.w. (mm)', 'connection load', 'voltage', 'phase', 'comments__','m^3/h','m^3/h_','hw (mm)','waste','size (mm)_','in (mm)', 'out (mm)', 'kw', 'mbar']
-    if not metric:        
-        for head in headers:
-            if head not in hDict:
-                missing.append(head)
-    else:
-        for head in metricHeaders:
-            if head not in hDict:
-                missing.append(head)
+    headers = ['description','qty','equipment','remarks','manuf.','model']
+    for head in headers:
+        if head not in hDict:
+            missing.append(head)
     if missing:
         msgLabel.config(text="The following header(s) are missing: " + ", ".join(missing))
         return
+
+    optionalHeaders = ['hgt._','cw', 'd.w.', 'connection load','voltage', 'phase', 'comments__', 'cfm', 'cfm_', 'hw', 'waste', 'size_', 'in size', 'out size', 'btu\'s','w.c.']
+    optionalMetricHeaders = ['hgt. (mm)_', 'cw (mm)','d.w. (mm)', 'connection load', 'voltage', 'phase', 'comments__','m^3/h','m^3/h_','hw (mm)','waste','size (mm)_','in (mm)', 'out (mm)', 'kw', 'mbar']
+
+    missing = [head for head in optionalHeaders if head not in hDict]
+    metricMissing = [head for head in optionalMetricHeaders if head not in hDict]
+
+    if len(missing) < len(metricMissing):
+        metric = False
+        if missing:
+            msgLabel.config(text="Warning: The following header(s) may be missing: " + ", ".join(missing))
+    else:
+        metric = True
+        if metricMissing:
+            msgLabel.config(text="Warning: The following header(s) may be missing: " + ", ".join(missing))
+    
     #Iterate every row in Revit output sheet
     for row in sheet.rows:
-        
-        
+    
         #Skip header rows
         if row[hDict['equipment']].value == None or row[hDict['equipment']].value == 'NO' or row[hDict['equipment']].value == 'EQUIPMENT':
             continue
@@ -452,15 +453,16 @@ def writeSpecs(msgLabel, units):
             #Utilities
             run = run + ("\nUtilities Req'd:\t")
             is_empty = True
+            
 #================= Imperial Utilities ================
                 #Plumbing
             if not metric: 
-                if(row[hDict['hgt._']].value != None and str(row[hDict['hgt._']].value)[0] == "-" and row[hDict['cw']].value == None):
+                if(set(['hgt._','cw','d.w.']).issubset(hDict) and str(row[hDict['hgt._']].value)[0] == "-" and row[hDict['cw']].value == None):
                     run = run + (str(row[hDict['d.w.']].value) + " drain recessed " + str(row[hDict['hgt._']].value)[1:])
                     is_empty = False
             
                 #Electrical
-                if(row[hDict['connection load']].value != None):
+                if(set(['connection load', 'voltage', 'phase', 'comments__']).issubset(hDict) and row[hDict['connection load']].value != None):
                     a=str(row[hDict['connection load']].value).split("_x000D_\n")
                     v=str(row[hDict['voltage']].value).split("_x000D_\n")
                     ph=str(row[hDict['phase']].value).split("_x000D_\n")
@@ -488,7 +490,7 @@ def writeSpecs(msgLabel, units):
                     #Ventilation
                 cfm = [] 
                 unit = " CFM"
-                if row[hDict['cfm']].value != None:
+                if 'cfm' in hDict and row[hDict['cfm']].value != None:
                     if type(row[hDict['cfm']].value) == int:
                         cfm.append(str(row[hDict['cfm']].value)+ unit + " Exhaust")
                     else:
@@ -498,7 +500,7 @@ def writeSpecs(msgLabel, units):
                         else:
                             for value in values:
                                 cfm.append(value[:4] + unit +" Exhaust")
-                if type(row[hDict['cfm_']].value) == str:
+                if 'cfm_' in hDict and type(row[hDict['cfm_']].value) == str:
                     values = str("".join(str(row[hDict['cfm_']].value).split("_x000D_"))).split()
                     print(values)
                     if values.count(values[0]) == len(values):
@@ -521,7 +523,7 @@ def writeSpecs(msgLabel, units):
 
                 
                 
-                if row[hDict['cw']].value != None:
+                if 'cw' in hDict and row[hDict['cw']].value != None:
                     if("_x000D_" in str(row[hDict['cw']].value)):
                         temp = row[hDict['cw']].value.split("_x000D_")
                         if "\n" in "".join(temp):
@@ -533,14 +535,14 @@ def writeSpecs(msgLabel, units):
                     else:
                         tempList.append(str(row[hDict['cw']].value) + " CW")
 
-                if row[hDict['hw']].value != None:
+                if 'hw' in hDict and row[hDict['hw']].value != None:
                     tempList.append(str(row[hDict['hw']].value) + " HW")
                         
                     #Waste
-                if row[hDict['waste']].value != None:
+                if 'waste' in hDict and row[hDict['waste']].value != None:
                     tempList.append(str(row[hDict['waste']].value) + " IW")
 
-                if row[hDict['d.w.']].value != None and tempList:
+                if 'd.w.' in hDict and row[hDict['d.w.']].value != None and tempList:
                     tempList.append(str(row[hDict['d.w.']].value) + " DW")
                 
 
@@ -553,14 +555,14 @@ def writeSpecs(msgLabel, units):
                     is_empty = False
 
                     #Gas
-                if row[hDict['size_']].value != None:
+                if set(['size_','btus\'s','w.c.']).issubset(hDict) and row[hDict['size_']].value != None:
                     if not is_empty:
                         run = run + "; "
                     run = run + str(row[hDict['size_']].value) + " Gas @ " + str(row[hDict['btu\'s']].value) + " BTU; " + str(row[hDict['w.c.']].value) + " WC"
                     is_empty = False
            
                     #Chilled Water
-                if row[hDict['out size']].value != None:
+                if set(['in size', 'out size']).issubset(hDict) and row[hDict['out size']].value != None:
                     if not is_empty:
                         run = run + "; "
                     else:
@@ -569,16 +571,16 @@ def writeSpecs(msgLabel, units):
                     
 #================== METRIC UTILITIES ==========================
             else:
-                if (row[hDict['hgt. (mm)_']].value != None and str(row[hDict['hgt. (mm)_']].value)[0] == "-" and row[hDict['cw (mm)']].value == None) and ("mm" not in str(row[hDict['hgt. (mm)_']].value)):
+                if(set(['hgt. (mm)_','cw (mm)']).issubset(hDict) and row[hDict['hgt. (mm)_']].value != None and str(row[hDict['hgt. (mm)_']].value)[0] == "-" and row[hDict['cw (mm)']].value == None) and ("mm" not in str(row[hDict['hgt. (mm)_']].value)):
                     run = run + (str(row[hDict['hgt. (mm)_']].value) + "mm drain recessed " + str(row[hDict['cw (mm)']].value)[1:])
                     is_empty = False
         
-                if(row[hDict['connection load']].value != None):
+                if(set(['connection load','voltage','phase']).issubset(hDict) and row[hDict['connection load']].value != None):
                     a=str(row[hDict['connection load']].value).split("_x000D_\n")
                     v=str(row[hDict['voltage']].value).split("_x000D_\n")
                     ph=str(row[hDict['phase']].value).split("_x000D_\n")
                     c=None
-                    if(row[hDict['comments__']].value != None):
+                    if('comments__' in hDict and row[hDict['comments__']].value != None):
                         c=str(row[hDict['comments__']].value).split("_x000D_\n")
                     for i in range(len(a)):
                         if not is_empty:
@@ -599,7 +601,7 @@ def writeSpecs(msgLabel, units):
                     is_empty = False
                 unit = " M^3/H"
                 cfm=[]
-                if row[hDict['m^3/h']].value != None:
+                if 'm^3/h' in hDict and row[hDict['m^3/h']].value != None:
                     if type(row[hDict['m^3/h']].value) == int:
                         cfm.append(str(row[hDict['m^3/h']].value)+ unit + " Exhaust")
                     else:
@@ -609,7 +611,7 @@ def writeSpecs(msgLabel, units):
                         else:
                             for value in values:
                                 cfm.append(value[:4] + unit +" Exhaust")
-                if type(row[hDict['m^3/h_']].value) == str:
+                if 'm^3/h_' in hDict and type(row[hDict['m^3/h_']].value) == str:
                     values = str("".join(str(row[hDict['m^3/h_']].value).split("_x000D_"))).split()
                     print(values)
                     if values.count(values[0]) == len(values):
@@ -619,7 +621,7 @@ def writeSpecs(msgLabel, units):
                             cfm.append(value[:4] + unit +" Supply")
 
                 tempList=[]
-                if row[hDict['cw (mm)']].value != None:
+                if 'cw (mm)' in hDict and row[hDict['cw (mm)']].value != None:
                     if ("_x000D_" in str(row[hDict['cw (mm)']].value)):
                         temp = row[hDict['cw (mm)']].value.split("_x000D_")
                         if '\n' in "".join(temp):
@@ -637,16 +639,16 @@ def writeSpecs(msgLabel, units):
                     else:
                         tempList.append(str(row[hDict['cw (mm)']].value) + " CW")
 
-                if row[hDict['hw (mm)']].value != None:
+                if 'hw (mm)' in hDict and row[hDict['hw (mm)']].value != None:
                     if "mm" not in str(row[hDict['hw (mm)']].value):
                         tempList.append(str(row[hDict['hw (mm)']].value) + "mm HW")
                     else:
                         tempList.append(str(row[hDict['hw (mm)']].value) + " HW")
 
-                if row[hDict['waste']].value != None and "mm" not in str(row[hDict['waste']].value):
+                if 'waste' in hDict and row[hDict['waste']].value != None and "mm" not in str(row[hDict['waste']].value):
                     tempList.append(str(row[hDict['waste']].value) + "mm IW")
                                     
-                if row[hDict['d.w. (mm)']].value != None and tempList:
+                if 'd.w. (mm)' in hDict and row[hDict['d.w. (mm)']].value != None and tempList:
                     if "mm" not in str(row[hDict['d.w. (mm)']].value):
                         tempList.append(str(row[hDict['d.w. (mm)']].value) + "mm DW")
                     else:
@@ -660,7 +662,7 @@ def writeSpecs(msgLabel, units):
                 if tempList:
                     is_empty = False
         
-                if row[hDict['size (mm)_']].value != None:
+                if set(['size (mm)_', 'mbar', 'kw']).issubset(hDict) and row[hDict['size (mm)_']].value != None:
                     if not is_empty:
                         run = run + "; "
                     run = run + str(row[hDict['size (mm)_']].value) + "mm LP Gas @ " + str(row[hDict['kw']].value) + " KW "
@@ -668,7 +670,7 @@ def writeSpecs(msgLabel, units):
                         run = run + "; " + str(row[hDict['mbar']].value) + " mbar"
                     is_empty = False
 
-                if row[hDict['out (mm)']].value != None:
+                if set(['in (mm)','out (mm)']).issubset(hDict) and row[hDict['out (mm)']].value != None:
                     if not is_empty:
                         run = run + "; "
                     else:
@@ -987,14 +989,12 @@ def ModifyEntry(con, tv, root, msg):
             msgLabel.config(text="Warning: Cannot open Doc file due to special characters in the name.")
             return
         res.set(str(db.ModifyEntry([itemInfo["text"], itemInfo["values"][0], itemInfo["values"][1], itemInfo["values"][3]], changes, cur)))    
-        #print(res.get())
         top.destroy()
 
     submitButton = tk.Button(top, text="Submit", command=submit)
     submitButton.grid(row=7,column=2, pady = 20)
 
     root.wait_window(top)
-    #print(res.get())
     if int(res.get()) <1:
         msg.config(text="Couldn\'t update entry")
         return
@@ -1004,7 +1004,6 @@ def ModifyEntry(con, tv, root, msg):
         msg.config(text="Successfully Modified Entry")
     changes = ch.get().split(",")
     if len(changes) < 4:
-        #print("NO GO BRO")
         return
     con.commit()
     
@@ -1032,7 +1031,6 @@ def ModifyEntry(con, tv, root, msg):
     else:
         vals[2] = itemInfo['values'][2]
         vals[3] = itemInfo['values'][3]
-    #print(vals[2] +":"+itemInfo['values'][2] + ":" + changes[3]) 
     tv.item(item, text=desc, values=vals)
     
 def AddEntry(con, tv, msg):
@@ -1278,13 +1276,8 @@ def wsWindow():
 
     refButton = tk.Button(root, text="Make Ref Sheet\n(Optional)", command=lambda:findSpecs(messageLabel))
     refButton.grid(row=3, column=3, padx=10, pady=10)
-
-    var = tk.StringVar(root, "Imperial")
-    options = ["Imperial","Metric"]
-    drop = tk.OptionMenu(root, var, *options)
-    drop.grid(row=2, column=3, pady=10)
-    
-    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel, var.get()))
+  
+    submitButton = tk.Button(root, text="Create Specs", command=lambda:writeSpecs(messageLabel))
     submitButton.grid(row=8, column = 3, pady = 20)
 
 #Open the selection window
