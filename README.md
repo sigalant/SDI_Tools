@@ -1,4 +1,7 @@
 # SDI_Tools
+## How to use
+
+Each application has a help menu that opens an html with application-specific instructions on how to use it.
 
 ## Budget Formatting Tool
 
