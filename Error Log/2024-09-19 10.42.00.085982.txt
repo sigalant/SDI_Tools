@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BudgetingTool.py", line 125, in formatFile
+    print(sheet.calculate_dimension())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\openpyxl\worksheet\_read_only.py", line 143, in calculate_dimension
+    raise ValueError("Worksheet is unsized, use calculate_dimension(force=True)")
+ValueError: Worksheet is unsized, use calculate_dimension(force=True)

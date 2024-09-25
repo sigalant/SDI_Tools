@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 287, in formatFile
+    sheetNew[sheetNew.max_row][hDict[header]].font = opx.styles.Font(bold=True)
+                                                     ^^^^^^^^^
+AttributeError: module 'openpyxl' has no attribute 'style'. Did you mean: 'styles'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
+    return self.func(*args)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 376, in form
+    formatFile(voltList)
+  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 289, in formatFile
+    print("Error with header: " + str(e))
+          ~~~~~~~~~~~~~~~~~~~~~~^~~
+TypeError: can only concatenate str (not "AttributeError") to str

@@ -1,0 +1,56 @@
+<h1 id="sdi_tools">SDI_Tools</h1>
+<h2 id="specs-generation-tool-v2">Specs Generation Tool V2</h2>
+<p>The Specs Generation Tool can be used to automatically generate a formatted specs document using the information provided by the _ALL INCLUSIVE AutoQuotes Excel export file, and an existing database of Spec templates.  </p>
+<h3 id="selection-window">Selection Window</h3>
+<p>When you first open the application, you will be greeted by a window with two buttons: &quot;Manage DB&quot; and &quot;Write Specs&quot;. This is the selection window. 
+By clicking on the &quot;Manage DB&quot; button, you will by taken to the DB interface window. Likewise, clicking the &quot;Write Specs&quot; button will take you to the Write Specs window.
+</p><p><img src="./html images/selection_window.PNG" alt="Example of Selection Window"></p>
+<h3 id="db-interface-window">DB Interface Window</h3>
+<p>After clicking the &quot;Manage DB&quot; button on the selection window, you will be taken to a window with a table containing all entries in the database, several buttons to interact with the database, and a button labeled &#39;&lt;-&#39; which will take you back to the selection window when clicked. This is the DB Interface Window, and will be used whenever updates are made to the spec template docs, or changes need to be made specifically to the database. 
+<img src="./html images/DB_Window.PNG" alt="Example of DB Interface Window"></p>
+<h4 id="database-table">Database Table</h4>
+<p>The table in the middle of the window contains all the entries in the database. Each entry in this database can be double-clicked to open the source document for the entry (assuming it exists and is accessible from the current machine). Along the top of the table are four headers which can be clicked to sort the entries by that category.</p>
+<h4 id="add-entry-button">Add Entry Button</h4>
+<p>The button labeled &quot;Add Entry&quot; can be used whenever a new spec template doc has been created that you want to add to the database. Clicking this button will open a file explorer window from which you may select one or more Word Documents which will be parsed and added to the database.</p>
+<p><em>Warnings</em>:  </p>
+<ul>
+<li>The selected document must follow the naming convention &quot;description_manufacturer_model.docx&quot; in order to be properly added to the database</li>
+<li>If a document is added from a local drive, users on other machines will have limited interaction capability with that entry</li>
+<li>If the provided document is currently associated with another entry in the database, it will not be added. (This  can be circumvented using the &quot;Modify Entry&quot; button.) </li>
+<li>If the provided doc contains the character, &#39;~&#39;, in it&#39;s text, there will likely be unexpected behavior with the font color  information when creating specs for that item. </li>
+</ul>
+<h4 id="modify-entry-button">Modify Entry Button</h4>
+<p>The button labeled &quot;Modify Entry&quot; can be used whenever there is an entry in the database that needs one of the fields to be changed. When you click this button (while an entry in the table is selected), another window will appear with three text boxes and two buttons. The text boxes will be filled with all the corresponding information of the selected entry, and text will be displayed showing the file path of the word document currently being used for that entry. Here you can change any of the text in the text boxes, and/or click the button labeled &quot;Select Doc&quot; to change the corresponding field(s). Once all desired changes have been made, click the button labeled &quot;Submit&quot; to make those changes in the database.
+</p><p><img src="./html images/EditSpec_Window.PNG" alt="Example of Specs Document"></p>
+<p><em>Warnings</em>:</p>
+<ul>
+<li>If two entries have previously been modified so that their fields are all the same, modifying one entry will modify both. </li>
+<li>If the word file used is either inaccessible or doesn&#39;t exist at the expected location, the entry will not be changed.  <h4 id="delete-entry-button">Delete Entry Button</h4>
+The button labeled &quot;Delete Entry&quot; can be used whenever an entry needs to be removed from the database. When this button is clicked, while an entry in the table is selected, that entry is removed from the database.</li>
+</ul>
+<p><em>Warnings</em>:</p>
+<ul>
+<li>If there are multiple entries which use the same template document and one is deleted, all entries using that document will be removed from the database as well. </li>
+</ul>
+<h4 id="update-entries-button">Update Entries Button</h4>
+<p>The button labeled &quot;Update Entries&quot; can be used whenever a change has been made to a template spec document. Clicking this button will go through all entries and check if the corresponding documents have been updated since the last time they were copied into the database. If so, the content of the template doc is copied into the database. </p>
+<p><em>Warnings</em>:
+-If the doc is inaccessible or doesn&#39;t exist in the expected location, the entry will not be updated. </p>
+<h4 id="search-text-box">Search Text Box</h4>
+<p>Above the table of database entries, there is a text box and dropdown menu for searching the database entries. This can be used to find specific entries, or entries which share a description, manufacturer, or model. To view all entries after searching the database, you can delete the text from the text box and click the search button. </p>
+<p><em>Warnings</em>:
+-Certain special characters (such as: &#39; ) may cause errors when searching the database. </p>
+<h3 id="write-specs-window">Write Specs Window</h3>
+<p>After clicking the button labeled &quot;Write Specs&quot; from the selection window, you will be taken to a window with a button labeled &quot;&lt;-&quot; which will return you to the selection window, and five other buttons. The buttons labeled &quot;Select Input File&quot; and &quot;Select Output Folder&quot; will both open a file explorer, and must be set when using the other buttons on this window. When you click the &quot;Select Input Button&quot; you are expected to select the _ALL INCLUSIVE Excel sheet that pertains to the project you wish to create specs for. The &quot;Select Output Folder&quot; simply expects you to select where you want the output files of this application to go. The path of the input file and output folder will both be displayed above the button labeled &quot;Create Specs&quot; once they have been selected. 
+</p><p><img src="./html images/WriteSpecs_Window.PNG" alt="Example of Write Specs Window"></p>
+<h4 id="spec-ref-sheet-optional-">Spec Ref Sheet (optional)</h4>
+<p>The two buttons with the label &quot;(Optional)&quot; are not required for creating specs, but may be helpful. The button labeled &quot;Make Ref Sheet&quot; will use the supplied _ALL INCLUSIVE Excel file and create an Excel sheet listing all the items of the project (excluding NIC, SpareNo, and existing) alongside hyperlinks to the most likely matching Specs Template Document for that item. If there was an exact match for that item&#39;s model number, the row will be highlighted white. If there was a partial match of that item&#39;s description and manufacturer, the row will be highlighted yellow, and if no match could be found for the item, the row will be highlighted red, and there will be no hyperlink for that item. This sheet can be used to determine which items have specs associated with them in the database, and which still need specs to be created for them. If this sheet is used when creating specs by selecting it after clicking the button labeled &quot;Select Ref Sheet&quot;, the document in the hyperlink column will be used to generate the spec body text, and the highlighting of the row will be used to determine whether or not to highlight the spec body text. While the spec ref sheet is not required to be either created or manipulated for creating specs, it may be helpful for controlling the way in which the specs are made. 
+</p><p><img src="./html images/SpecsRef.PNG" alt="Example of Specs Ref Sheet"></p>
+<h4 id="creating-specs">Creating Specs</h4>
+<p>When you are ready to create a specs document for a project (input/output has been selected, database has been updated, etc.), you can click on the &quot;Create Specs&quot; button on the bottom of the window. This will create a Word document with entries for each item on the supplied _ALL INCLUSIVE Excel file. The header for each of the specs are created using the information available on the _ALL INCLUSIVE Excel file. The body text for existing items is generated from the description of the item, and for all other items it is pulled from the database where items that don&#39;t exist in the database are left without body text. If no spec ref sheet was selected with the &quot;Select Ref Sheet&quot; button, and there are multiple entries in the database which have an exact match with an item, a popup window will appear with a table of all the matching entries. From this window you may double click an entry to view the template doc and select the entry you wish to use before clicking the &quot;Select&quot; button at the bottom of the window. The program will remember the selection you made for that item, and will use that entry for all other occurrences of that item. 
+</p><p><img src="./html images/ChooseSpec_Window.PNG" alt="Example of Specs Document"></p>
+<p><em>Warnings</em>:</p>
+<ul>
+<li>The _ALL INCLUSIVE excel file used is expected to have columns labeled: &quot;EQUPIMENT&quot;, &quot;VENTILATION&quot;, &quot;PLUMBING&quot;, and &quot;ELECTRICAL&quot; as well as all their corresponding sub headers for the expected behavior.  </li>
+<li>Any matches for the description of Custom Fabrication items are assumed to be correct since custom fabrication items don&#39;t use a unique model number.</li>
+</ul>
