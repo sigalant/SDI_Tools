@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\Antonio\AppData\Local\Programs\Python\Python312\Lib\idlelib\run.py", line 580, in runcode
-    exec(code, self.locals)
-  File "<pyshell#2>", line 1, in <module>
-ModuleNotFoundError: No module named 'PILO'

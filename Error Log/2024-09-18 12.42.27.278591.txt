@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 54, in <module>
-    ico= Image.open(resource_path("SDI_Logo.ico"))
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Antonio\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\PIL\Image.py", line 3277, in open
-    fp = builtins.open(filename, "rb")
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\Antonio\\Documents\\GitHub\\SDI_Tools\\SDI_Logo.ico'

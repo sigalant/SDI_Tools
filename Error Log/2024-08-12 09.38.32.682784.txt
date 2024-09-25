@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BulkLoads.py", line 431, in <module>
-    voltText.insert(0, "120")
-  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 3842, in insert
-    self.tk.call((self._w, 'insert', index, chars) + args)
-_tkinter.TclError: bad text index "0"

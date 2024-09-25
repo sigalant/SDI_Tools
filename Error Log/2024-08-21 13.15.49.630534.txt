@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.12_3.12.1264.0_x64__qbz5n2kfra8p0\Lib\tkinter\__init__.py", line 1968, in __call__
-    return self.func(*args)
-           ^^^^^^^^^^^^^^^^
-  File "C:\Users\Antonio\Documents\GitHub\SDI_Tools\BudgetingTool.py", line 318, in formatFile
-    if (data[i][7] != None and 'ft' in str(data[i][7]).lower()) or (data[i][4] != None and 'custom fab' in str(data[i][4]).lower()):
-                                       ^^^^^^^^^^^^^^^^
-AttributeError: 'int' object has no attribute 'lower'
