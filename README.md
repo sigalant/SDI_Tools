@@ -4,7 +4,7 @@
 
 Build from terminal with: 
 ```
-python -m PyInstaller --onefile -i ./data/SDI_Logo.PNG --hide-console hide-early BudgetingTool.py
+python -m PyInstaller -F -w -i ./data/SDI_Logo.PNG BudgetingTool.py 
 ```
 ### How to Use
 
@@ -29,3 +29,15 @@ If a header is omitted or misspelled from the original exported AQ Excel file, a
 *[Warning]* Possible errors could occur if:
 	- the first row of the exported AQ Excel file is not populated with the headers of the columns. 
 	- the logo located in the "AutoQuotes Budget Script" folder is removed, or replaced with an image with a different name
+## Specs Generation Tool
+
+Build from terminal with: 
+```
+python -m PyInstaller -D --add-binary SpecDB.py:. -w -i ./data/SDI_Logo.ico SpecTool.py
+```
+## Utility Loads Formatting Tool
+
+Build from terminal with: 
+```
+python -m PyInstaller -D --add-binary LogErrors.py:. -w -i ./data/SDI_Logo.ico BulkLoads.py
+```
