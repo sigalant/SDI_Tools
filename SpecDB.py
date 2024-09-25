@@ -40,7 +40,7 @@ def parseSpecs(file):
             docText = docText + ('\n')
         p_runs = []
     docText = docText + ('\n'.join(fullText))
-    #print(docText)
+    
     return docText
 
 #Add new entry into DB
@@ -49,16 +49,16 @@ def addEntry(info, cur):
         info[i] = info[i].replace("'","''").replace('"','""')
     #Ignore if entry already exists
     query = ("SELECT doc FROM item WHERE doc='" +str(info[3]) +"'")
-    #print(query)
+   
     res = cur.execute(query)
     if(res.fetchone()): 
-        print("Entry for " + info[0] + ":" + info[2] + " already exists.")
+        
         return False
     else:
-        print("Adding Entry for " + info[0])
+        
         #Add Entry
         q=("INSERT INTO item VALUES ('" + str(info[0]) + "','" + str(info[1]) + "','" + str(info[2]) + "','" + str(info[3])+ "')")
-        print(q)
+        
         cur.execute(q)
         specText = parseSpecs(info[3].replace("''","'").replace('""','"'))
         specText = specText.replace("'", "''").replace('"','""')
@@ -66,7 +66,7 @@ def addEntry(info, cur):
         query2 = ("INSERT INTO spec VALUES (\'" + str(info[3]) + "\',\'" + str(specText) + "\',\'"+str(os.path.getmtime(info[3].replace('""','"').replace("''","'")))+"\')")
         cur.execute(query2)
         return True
-        #print(query2)
+       
 
 #Add entries from folder
 def addEntries(folderPath, cur):
@@ -92,10 +92,10 @@ def ModifyEntry(entry, changes, cur):
         changeList.append("doc='"+changes[3]+"'")
         cur.execute("UPDATE spec SET doc='"+str(changes[3])+"', text='"+str(parseSpecs(changes[3]).replace("'","''").replace('"','""')) +"', modTime='"+str(os.path.getmtime(changes[3]))+"' WHERE doc='"+entry[3]+"'")
     if not changeList:
-        print("Nothing was entered...?")
+        
         return
     query = "UPDATE item SET " + ", ".join(changeList) + " WHERE desc='"+str(entry[0])+"'AND manu='"+str(entry[1])+"'AND model='"+str(entry[2])+"'AND doc='"+entry[3]+"'"
-    print(query)
+    
     return cur.execute(query).rowcount
     
 
@@ -129,7 +129,7 @@ def UpdateSpecs(cur):
     for item in cur.execute("SELECT * FROM spec").fetchall():
         try:
             if str(item[2]) == str(os.path.getmtime(item[0])):
-                #print("No updates found.")
+                
                 continue
         except:
             missing.append(item[0])
@@ -138,7 +138,7 @@ def UpdateSpecs(cur):
         if newText == -1:
             missing.append(item[0])
             continue
-        print("Updating: " + item[0])
+        
         cur.execute("UPDATE spec SET text='" + newText.replace("'","''").replace('"','""') + "', modTime='" + str(os.path.getmtime(item[0])) + "' WHERE doc = '" + item[0] + "'") 
     return missing
 

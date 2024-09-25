@@ -58,10 +58,9 @@ def handle_exception(exc,val,tb):
     LogErrors.handle_exception(exc,val,tb)
 root.report_callback_exception = handle_exception
 
-#REMOVE COMMENTS AFTER COMPLETING CHANGES
-#ico = Image.open(resource_path("SDI Logo.jpg"))
-#photo = ImageTk.PhotoImage(ico)
-#root.wm_iconphoto(False, photo)
+ico = Image.open(resource_path("SDI Logo.jpg"))
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 
 #Copy Specs Using Filepath as a Key for the Specs DB
 def copySpecs(tempDocPath, p, highlight, cur):
@@ -438,8 +437,6 @@ def writeSpecs(msgLabel):
             #Remove "Custom Fabrication" from pert. data
             if(type(row[hDict['remarks']].value) == str and "CUSTOM FABRICATION" in row[hDict['remarks']].value.upper()):
                 temp = "".join(re.split("custom fabrication", row[hDict['remarks']].value, flags=re.IGNORECASE))
-                #run = run + temp
-                #"See Plans, Drawing #___ "
                 if ", " in temp:
                     run = run + temp[2:] + ", See Plans, Drawing #___ "
                 else:
@@ -520,9 +517,6 @@ def writeSpecs(msgLabel):
             
                     #Plumbing (but more)   
                     #Water
-
-                
-                
                 if 'cw' in hDict and row[hDict['cw']].value != None:
                     if("_x000D_" in str(row[hDict['cw']].value)):
                         temp = row[hDict['cw']].value.split("_x000D_")
@@ -727,7 +721,7 @@ def writeSpecs(msgLabel):
                 
             #If excel sheet is not provided, search through DB for a match
             elif excelFilepath == "":
-                con = None #sqlite3.connect("specsDB.db")
+                con = None 
                 dbPath = resource_path('specsDB.db')
                 try:
                     con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
@@ -757,11 +751,11 @@ def writeSpecs(msgLabel):
                     #If there were multiple matches, offer user to choose the best match
                     
                     if len(matches) > 1:
-                        #print(matches)
+                        
                         try:
                             #Try using dictionary to make decision
                             specDoc = specDict[str(specData[2])]
-                            #print(specDict)
+                            
                         except:
                             #Have user make a decision and save it to dictionary
                             top=tk.Toplevel(root)
@@ -788,7 +782,7 @@ def writeSpecs(msgLabel):
                             specDict[str(specData[2])] = specDoc
                     else:
                         specDoc = matches[0][3]
-                    #print(specDoc)
+                    
                     copySpecs(specDoc, doc.add_paragraph('', style = 'Spec_Header'), False, cur)
                 else:
                     #Check partial matches
@@ -814,12 +808,12 @@ def writeSpecs(msgLabel):
                             else:
                                 bestMatch = closestMatch(specData[2], matches, 1)
                 
-                            print(str(specData[2]) + ":" + str(bestMatch) + ":" + str(matches))
+              
                         copySpecs(bestMatch[2], doc.add_paragraph('', style = 'Spec_Header'), True, cur)
 
             #If Spec Ref Sheet has been provided
             else:
-                con = None #sqlite3.connect("specsDB.db")
+                con = None 
                 dbPath = resource_path('specsDB.db')
                 try:
                     con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)
@@ -833,7 +827,7 @@ def writeSpecs(msgLabel):
                 #if specs exist, copy and paste    
                 if (row[hDict['model']].value != None and str(row[hDict['model']].value).lower() in specRefs[2] and specRefs[4][specRefs[2].index(str(row[hDict['model']].value).lower())]
                       and str(row[hDict['model']].value).lower() not in ambiguousModels) and specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())] != "":
-                    #print("An Exact Match")
+                    
                     if -1 == copySpecs(specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())], doc.add_paragraph('', style = 'Spec_Header'), False, cur) and specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())] not in broken:
                         broken.append(specRefs[3][specRefs[2].index(str(row[hDict['model']].value).lower())])
                     
@@ -907,7 +901,7 @@ def Search(tv, text, cur, var, msg):
             found = db.FindEntry(fields, cur)
             msg.config(text = "Search successful")
         except:
-            print("This should probably be handled in the SpecDB.py file, but whatever")
+            
             msg.config(text = "Avoid using special characters")
             return
         tv.delete(*tv.get_children())
@@ -1041,7 +1035,7 @@ def AddEntry(con, tv, msg):
             missing.append(f)
             continue
         splitfile = f.split('/')
-        #print(splitfile)
+        
         splitfile = splitfile[len(splitfile)-1].split('_')
         if len(splitfile) < 3:
             missing.append(f)
@@ -1050,7 +1044,7 @@ def AddEntry(con, tv, msg):
         if db.addEntry([splitfile[0].strip(), splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), f], cur):
             tv.insert('', tk.END, text =str(splitfile[0].strip()), values = (splitfile[1].strip(), splitfile[2].split('.docx')[0].strip(), '_'.join(splitfile), f), tags=("tag?",))
         
-        #print(f)
+       
     if missing:
         msg.config(text='Couldn\'t add specs for the following (doesn\'t follow naming convention):\n '+'\n'.join(missing))
     else:
@@ -1072,9 +1066,9 @@ def DeleteEntry(con, tv, msg):
         return
     itemInfo = tv.item(item)
     tv.delete(item)
-    #print(itemInfo)
+    
     res = db.DeleteEntry(itemInfo['values'][3], cur)
-    #print(res)
+   
     if res[0] >1 or res[1]>1:
         msg.config(text = "Deleted Multiple Entries with doc: " + itemInfo['values'][3])
     elif res[0] and res[1]:  
@@ -1082,13 +1076,13 @@ def DeleteEntry(con, tv, msg):
     else:
         msg.config(text="Couldn't find entry: " + itemInfo['values'][3])
     con.commit()
-    #print("Deleted: " + str(itemInfo['values']))
+    
     
 #Update all out-of-date specs with changes in Doc file
 def UpdateSpecs(con,msg):
     cur = con.cursor()
     missing = db.UpdateSpecs(cur)
-    #print(missing)
+   
     if missing:
         msg.config(text="Couldn\'t find the following files: " + "\n".join(missing))
     else:
@@ -1170,7 +1164,7 @@ def DBWindow():
     treeview.column('#4', stretch='no', minwidth=0, width=0, anchor=tk.E)
     treeview.tag_bind('tag?', "<Double-1>", lambda event, msg=messageBox:openFile(event, msg))
 
-    con = None #sqlite3.connect("specsDB.db")
+    con = None 
     dbPath = resource_path("specsDB.db")
     try:
         con=sqlite3.connect("file:"+dbPath+"?mode=rw", uri=True)

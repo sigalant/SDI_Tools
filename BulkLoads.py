@@ -54,9 +54,9 @@ def handle_exception(exc,val,tb):
 
 root.report_callback_exception = handle_exception
 
-#ico= Image.open(resource_path("SDI_Logo.ico"))
-#photo = ImageTk.PhotoImage(ico)
-#root.wm_iconphoto(False, photo)
+ico= Image.open(resource_path("SDI_Logo.ico"))
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 
 #For displaying errors to user
 errorFrame = tk.Frame(root)
@@ -139,7 +139,7 @@ def formatFile(voltList):
                         cellData[i] = fList[0]*fList[1]
                     else:
                         cellData[i] = [float(t) for t in re.findall(r'\d+\.?\d*', cellData[i])][0]
-                if head not in ['volts', 'ph', 'amps']: # maybe also kw?
+                if head not in ['volts', 'ph', 'amps','kw']: 
                     cellData = sum(cellData)
             
             #Adjust for quantity x: (x)...A
@@ -223,10 +223,10 @@ def formatFile(voltList):
     sheetNew.page_setup.fitToHeight = False
     sheetNew.page_setup.orientation = sheetNew.ORIENTATION_LANDSCAPE
     
-    #img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
-    #img.height=40
-    #img.width=65
-    #sheetNew.add_image(img, "A1")
+    img = opx.drawing.image.Image(resource_path("SDI_Logo.PNG"))
+    img.height=40
+    img.width=65
+    sheetNew.add_image(img, "A1")
 
     sheetNew['A3'] = "________ Preliminary Utility Schedule"
     sheetNew['A3'].font = opx.styles.Font(size=24, bold=True)
