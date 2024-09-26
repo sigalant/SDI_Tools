@@ -12,6 +12,7 @@ import time
 import tkinter as tk
 from tkinter import filedialog,ttk
 
+
 from fast_edit_distance import edit_distance
 import docx as d
 import openpyxl as opx
@@ -59,6 +60,8 @@ def handle_exception(exc,val,tb):
 root.report_callback_exception = handle_exception
 
 ico = Image.open(resource_path("SDI Logo.jpg"))
+
+
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 
