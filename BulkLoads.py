@@ -88,8 +88,8 @@ def formatFile(voltList):
 
     hDict = FindHeaders.FindHeaders(sheet)#Holds index of important values
 
-    inList = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
-    metricInList = ['amps', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
+    inList = [ 'gph', 'btus', 'exh cfm', 'supply cfm', 'volts', 'ph', 'heat rejection', 'no', 'qty']
+    metricInList = ['kw', 'volts','ph','lph', 'gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts','no','qty']
     summingIndexes = ['kw', 'gph', 'btus', 'exh cfm', 'supply cfm', 'heat rejection']
 
     missing = []
@@ -112,7 +112,7 @@ def formatFile(voltList):
             errorMsg.config(text=errorStr)
             return
         inList = metricInList
-        summingIndexes = ['amps','lph','gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
+        summingIndexes = ['kw','lph','gas kw', 'exh (m^3/h)', 'supply (m^3/h)', 'heat rejection watts']
     
     sheetData = []#Holds all data from input sheet
     
