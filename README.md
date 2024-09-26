@@ -9,29 +9,29 @@ Clone this repository (Instructions here: https://docs.github.com/en/repositorie
 
 Enter the following commands into the command prompt:
 
-'''
+```
 pip install pillow
-'''
+```
 
-'''
+```
 pip install openpyxl
-'''
+```
 
-'''
+```
 pip install PyInstaller
-'''
+```
 
-'''
+```
 pip install fast_edit_distance
-'''
+```
 
-'''
+```
 pip install python-docx
-'''
+```
 
-'''
+```
 pip install num2words
-'''
+```
 
 ## How to use
 
