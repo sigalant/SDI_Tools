@@ -552,7 +552,7 @@ def writeSpecs(msgLabel):
                     is_empty = False
 
                     #Gas
-                if set(['size_','btus\'s','w.c.']).issubset(hDict) and row[hDict['size_']].value != None:
+                if set(['size_','btu\'s','w.c.']).issubset(hDict) and row[hDict['size_']].value != None:
                     if not is_empty:
                         run = run + "; "
                     run = run + str(row[hDict['size_']].value) + " Gas @ " + str(row[hDict['btu\'s']].value) + " BTU; " + str(row[hDict['w.c.']].value) + " WC"
@@ -864,7 +864,7 @@ def writeSpecs(msgLabel):
         return
     if broken:
         msgLabel.config(text= "The following doc file(s) could not be found: \n" + '\n'.join(broken))
-    else:
+    elif msgLabel.cget("text") == 'Working...':
         msgLabel.config(text="Successfully Created Specs Document")
     print(str(time.time()-start_time) + " secs")
 #GUI
